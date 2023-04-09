@@ -1,0 +1,21 @@
+- npm install
+- Set up the env file 
+	- use sample env with env name in extension at the end
+- Generate the Migration & Run
+	- npm run typeorm migration:generate -n <src/migrations/migrationname>
+	- npm run typeorm migration:run <src/migrations/migrationname>
+
+- Adding a new CRUD implementation for a module
+	- Create an Entity first (uuid as a primary key when using this broilerplate for the product building instead of the autoincreament)
+	- Create the folder for the module 
+	- Add new Controller
+	- Import all the relevant entities in the module for TypeOrmModule forFeature
+	- Create the DTO (Need to install class-validatior & class-transaformer pkg for validations & transaforming the DTOs objects to explose specific properties)
+	- Setup the validation pipe in main app module for validation to work
+	- Setup the controller, service & DTOs to perform various crud operations
+
+- Authentication Implementation Passport JWT along with social network implementation
+	- Create the AuthToken Entity with required fields to store the auth tokens
+	- For JWT strategy
+		- Install nestjs passport, passport, passport jwt	
+

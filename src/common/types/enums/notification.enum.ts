@@ -1,0 +1,9 @@
+export enum NotificationTypes{
+	EMAIL = "EMAIL",
+	SMS = "SMS",
+	MOBILE = "MOBILE",
+	INAPP_WEB = "INAPP_WEB",
+	INAPP_MOBILE = "INAPP_MOBILE",
+	WHATSAPP = "WHATSAPP",
+	TELEGRAM = "TELEGRAM"
+}
