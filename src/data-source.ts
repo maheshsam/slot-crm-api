@@ -9,7 +9,6 @@ if(process.env.NODE_ENV){
 }
 
 dotenv.config({ path: `.env.${env}` });
-
 export const appDataSource = new DataSource({
   type: 'mysql',
   host: process.env.DB_HOST || '127.0.0.1',
