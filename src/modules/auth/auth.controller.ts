@@ -68,8 +68,8 @@ export class AuthController{
 	}
 
 	// this simulates a frontend url for testing oauth login
-	@Get("oauth/login")
-	oauthMock(@Query() query: { token: string }) {
-		return { message: "successfully logged", token: query.token };
-	}
+	// @Get("oauth/login")
+	// oauthMock(@Query() query: { token: string }) {
+	// 	return { message: "successfully logged", token: query.token };
+	// }
 }

@@ -19,3 +19,9 @@
 	- For JWT strategy
 		- Install nestjs passport, passport, passport jwt	
 
+
+
+- deployment on digital ocean apps
+	- typeorm db connection issues was resolved by adding port in type config file
+	- use of port 8080 instead of 3000, made sure 8080 port was used for the app in Settings > App Spec
+

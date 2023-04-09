@@ -11,10 +11,10 @@ import { HasPermissions } from '../../common/decorators/index';
 export class UsersController{
 	constructor(private usersService: UsersService){}
 
-	@Post('/register')
-	publicRegistration(@Body() body: RegisterUserDto){
-		return this.usersService.publicRegister(body);
-	}
+	// @Post('/register')
+	// publicRegistration(@Body() body: RegisterUserDto){
+	// 	return this.usersService.publicRegister(body);
+	// }
 
 	@Get('/:userId?')
 	@HasPermissions('view_users')
