@@ -33,7 +33,7 @@ export class AuthController{
 				httpOnly: true,
 			});
 		}
-		return { user, access_token: payload['access_token']};
+		return { user, access_token: payload['access_token'], refreshToken: payload['refresh_token']};
 	}
 
 	@Post("/token/refresh")
