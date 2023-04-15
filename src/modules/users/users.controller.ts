@@ -20,7 +20,6 @@ export class UsersController{
 	@HasPermissions('view_users')
 	listUsers(@Param('userId') userId?: number, @Query() qry?: GetUsersDto){
 		const args = {...qry!, user_id: userId};
-		console.log("args",args);
 		return this.usersService.getUsers(args);
 	}
 

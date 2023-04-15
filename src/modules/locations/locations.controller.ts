@@ -1,4 +1,4 @@
-import { Controller, Get, Body, Post, Put, Delete, Param } from '@nestjs/common';
+import { Controller, Get, Body, Post, Patch, Delete, Param } from '@nestjs/common';
 import { LocationsService } from './locations.service';
 import { CreateLocationDto } from './dtos/create-location.dto';
 import { UpdateLocationDto } from './dtos/update-location.dto';
@@ -20,7 +20,7 @@ export class LocationsController{
 		return this.locationsService.create(body);
 	}
 
-	@Put('/:locationid')
+	@Patch('/:locationid')
 	@HasPermissions('update_locations')
 	updateLocation(@Param('locationid') locationId: string, @Body() body: UpdateLocationDto){
 		return this.locationsService.update(parseInt(locationId),body);

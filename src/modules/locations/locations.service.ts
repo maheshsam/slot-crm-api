@@ -31,7 +31,7 @@ export class LocationsService{
 		if(locationDto.userId){
 			const user = await this.repoUser.findOne({where: {id: locationDto.userId}});
 			if(user){
-				location.user = user;
+				location.owner = user;
 			}
 		}
 		return this.repo.save(location);
@@ -44,7 +44,7 @@ export class LocationsService{
 	    }
 	    const userId = locationDto.userId;
 	    delete locationDto.userId;
-		const location = await this.repo.findOne({where: {id: locationId}, relations: {user: true}});
+		const location = await this.repo.findOne({where: {id: locationId}, relations: {owner: true}});
 		if(!location){
 			throw new NotFoundException('Location not found');
 		}
@@ -52,7 +52,7 @@ export class LocationsService{
 		if(userId){
 			const user = await this.repoUser.findOne({where: {id: userId}});
 			if(user){
-				location.user = user;
+				location.owner = user;
 			}
 		}
 		return location;

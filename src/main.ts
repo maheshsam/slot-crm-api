@@ -6,7 +6,7 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, {cors: true});
   const config = new DocumentBuilder()
     .setTitle('ESG Soft Slot CRM API Documentation')
     .setVersion('1.0')

@@ -6,6 +6,7 @@ import { User } from '../../entity/User';
 import { UserDetails } from '../../entity/UserDetails';
 import { Role } from '../../entity/Role';
 import { Permission } from '../../entity/Permission';
+import { Location } from '../../entity/Location';
 import { CreateUserDto } from './dtos/create-user.dto';
 import { GetUsersDto } from './dtos/get-users.dto';
 import { RegisterUserDto } from './dtos/register-user.dto';
@@ -24,6 +25,7 @@ export class UsersService {
 		@InjectRepository(UserDetails) private repoUserDetails: Repository<UserDetails>,
 		@InjectRepository(Role) private repoRole: Repository<Role>,
 		@InjectRepository(Permission) private repoPermission: Repository<Permission>,
+		@InjectRepository(Location) private repoLocation: Repository<Location>,
 		private masterDataService: MasterDataService,
 		private kafkaProducerService: KafkaProducerService,
 	){}
@@ -115,6 +117,13 @@ export class UsersService {
 			const roles = await this.repoRole.find({where: {id: In(body.roles)}});
 			if(roles){
 				user.roles = roles;
+			}
+		}
+
+		if(body.location_id){
+			const location = await this.repoLocation.findOne({where: {id: body.location_id}});
+			if(location){
+				user.userLocation = location;
 			}
 		}
 
