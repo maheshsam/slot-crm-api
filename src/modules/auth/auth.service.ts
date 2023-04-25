@@ -102,6 +102,10 @@ export class AuthService {
 		return;
 	}
 
+	async verify_token(user: User): Promise<User>{
+		return await user;
+	}
+
 	resetPassword(resetPassword): Promise<any> {
 		const { password, otpCode } = resetPassword;
 		return;

@@ -41,6 +41,13 @@ export class AuthController{
 		const refreshToken = req.cookies['refreshToken'] && req.cookies['refreshToken'][0] ? req.cookies['refreshToken'][0] : '';
 		return await this.tokensService.createAccessTokenFromRefreshToken(refreshToken);
 	}
+
+	@Post("/token/verify")
+	@Auth()
+	async verify_token(@LoggedInUser() user: User): Promise<User> {
+		console.log(user);
+		return await this.authService.verify_token(user);
+	}
 	
 
 	@Post("logout")

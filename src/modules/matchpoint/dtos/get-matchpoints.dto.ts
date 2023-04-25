@@ -1,41 +1,36 @@
 import { IsString, IsInt, IsOptional } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
-export class GetUsersDto{
+export class GetMatchpointsDto{
 	@ApiProperty()
 	@IsOptional()
-	user_id!: number
+	matchpoint_id!: number
 
 	@ApiProperty()
 	@IsOptional()
-	search!: string
+	customer_id!: number
 
 	@ApiProperty()
 	@IsOptional()
-	gender!: string
+	qry!: string
 
 	@ApiProperty()
 	@IsOptional()
-	city!: string
+	machine_number: number
 
 	@ApiProperty()
 	@IsOptional()
-	state!: string
+	is_active!: boolean
 
 	@ApiProperty()
 	@IsOptional()
-	country!: string
+	is_verified!: boolean
 
 	@ApiProperty()
 	@IsOptional()
-	role!: string
+	created_daterange!: string
 
 	@ApiProperty()
 	@IsOptional()
-	page!: number
-
-	@ApiProperty()
-	@IsOptional()
-	items_per_page!: number
-
+	status: boolean
 }
