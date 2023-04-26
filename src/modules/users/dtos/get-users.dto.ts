@@ -38,4 +38,8 @@ export class GetUsersDto{
 	@IsOptional()
 	items_per_page!: number
 
+	@ApiProperty()
+	@IsOptional()
+	status: string
+
 }

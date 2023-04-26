@@ -34,37 +34,19 @@ export class UsersService {
 	async getUsers(args?: GetUsersDto){
 		const page = args.page || 1;
 		const limit = args.items_per_page || 10;
-		// const payload = {
-		// 	"pagination": {
-		// 		"page":pageNumber,
-		// 		"first_page_url":"\/?page=1",
-		// 		"from":1,
-		// 		"last_page":1,
-		// 		"next_page_url":"",
-		// 		"items_per_page":"10",
-		// 		"prev_page_url":"\/?page=1",
-		// 		"to":4,
-		// 		"total":4,
-		// 		"links":[
-		// 			{"url":"\/?page=1","label":"&laquo; Previous","active":false,"page":1},
-		// 			{"url":"\/?page=1","label":"1","active":true,"page":1},
-		// 			// {"url":"\/?page=2","label":"2","active":true,"page":2},
-		// 			// {"url":"\/?page=3","label":"3","active":false,"page":3},
-		// 			{"url":"\/?page=3","label":"Next &raquo;","active":false,"page":3}
-		// 		]
-		// 	}
-		// };
 		if(args.user_id && args.user_id != undefined){
 			return this.repoUser.find({where: {id: args.user_id}, relations: { roles: true, permissions: true }});
 		}
 		try{
 			if(Object.keys(args).length > 0){
-
 				const usersQuery = this.repoUser.createQueryBuilder("user");
 				usersQuery.leftJoinAndSelect("user.userDetails", "user_details");
 				usersQuery.leftJoinAndSelect("user.roles", "role");
 				if(args.search && args.search != ""){
 					usersQuery.where("LOWER(user.email) LIKE LOWER(:qry) OR LOWER(user.mobile) LIKE LOWER(:qry) OR LOWER(user.full_name) LIKE LOWER(:qry) OR LOWER(user_details.first_name) LIKE LOWER(:qry) OR LOWER(user_details.middle_name) LIKE LOWER(:qry) OR LOWER(user_details.last_name) LIKE LOWER(:qry) OR LOWER(user_details.city) LIKE LOWER(:qry) OR LOWER(user_details.state) LIKE LOWER(:qry) OR LOWER(user_details.country) LIKE LOWER(:qry)", { qry: `%${args.search}%` });
+				}
+				if(args.status !== undefined && args.status !== ""){
+					usersQuery.where("user.is_active = :status",{status: String(args.status) == '1' ? true : false});
 				}
 				if(args.gender && args.gender != ""){
 					const genders = args.gender.split(",");
@@ -72,7 +54,6 @@ export class UsersService {
 				}
 				if(args.role && args.role != ""){
 					const roles = await this.repoRole.find({where: { id: In(args.role.split(",").map( Number ))}});
-					usersQuery.leftJoinAndSelect("user.roles", "role");
 					if(roles.length > 0){
 						const roleIds = roles.map((item) => {
 							return item.id;
@@ -82,7 +63,6 @@ export class UsersService {
 						usersQuery.where("role.id = :role",{ role: 0});
 					}
 				}
-			// console.log("sdfsdfsdf");
 				
 			//     // users.where(new Brackets(qb => {
 			//     //     qb.where("LOWER(user.full_name) LIKE LOWER(:qry) OR LOWER(user_details.first_name) LIKE LOWER(:qry) OR LOWER(user_details.middle_name) LIKE LOWER(:qry) OR LOWER(user_details.last_name) LIKE LOWER(:qry)", { qry: `%${qry.qry}%` })

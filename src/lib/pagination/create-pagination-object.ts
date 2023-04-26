@@ -21,7 +21,6 @@ export const createPaginationObject = <T>(
 
     const paginationNumericLinks: IPaginationLinks[] = [];
     for(let i = 1; i <= totalPages; i++){
-        console.log(currentPage,i,currentPage == i);
         paginationNumericLinks.push({"url":`{\/?page=${i}}`,"label":String(i),"active": currentPage == i ? true : false,"page":i});
     }
 

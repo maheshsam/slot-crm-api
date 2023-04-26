@@ -45,7 +45,6 @@ export class AuthController{
 	@Post("/token/verify")
 	@Auth()
 	async verify_token(@LoggedInUser() user: User): Promise<User> {
-		console.log(user);
 		return await this.authService.verify_token(user);
 	}
 	
