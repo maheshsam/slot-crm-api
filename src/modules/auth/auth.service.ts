@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { randomBytes, scrypt as _scrypt } from 'crypto';
 import { Repository, In, createQueryBuilder, Brackets } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -6,9 +6,10 @@ import { promisify } from 'util';
 import { User } from '../../entity/User';
 import { TokensService } from './tokens.service';
 import { ConfigService } from '@nestjs/config';
-import { IAuthenticationPayload } from '../../common/types/interfaces/authentication.interface';
-import { catchError, from, map, Observable, switchMap } from "rxjs";
+// import { IAuthenticationPayload } from '../../common/types/interfaces/authentication.interface';
+// import { catchError, from, map, Observable, switchMap } from "rxjs";
 import { JwtService } from '@nestjs/jwt';
+const getmac = require('getmac')
 
 const scrypt = promisify(_scrypt);
 
@@ -24,8 +25,17 @@ export class AuthService {
 	async login(email: string, password: string): Promise<any> {
 		const user = await this.repoUser.findOne({where:{email}, relations: { roles: { permissions: true }, permissions: true, userLocation: true }});
 	    if (!user) {
-	      throw new NotFoundException('user not found');
+	      	throw new NotFoundException('user not found');
 	    }
+		if (!user.is_active) {
+			throw new ForbiddenException('Account not active');
+		}
+
+		if(user.device_lock){
+			if(user.device_details != getmac.default()){
+				throw new ForbiddenException('Not allowed to login from this device');
+			}
+		}
 
 	    const [salt, storedHash] = user.password.split('.');
 

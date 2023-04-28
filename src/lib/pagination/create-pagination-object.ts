@@ -33,12 +33,13 @@ export const createPaginationObject = <T>(
 	const meta: IPaginationMeta = {
         page: currentPage,
         first_page_url: "\/?page=1",
-        from: currentPage == 1 ? 1 : (limit * currentPage) + 1,
+        // from: currentPage == 1 ? 1 : (limit * (currentPage-1)) + 1,
+        from: (limit * (currentPage-1)) + 1,
         last_page: totalPages,
         next_page_url: `{\/?page=${totalPages <= currentPage ? currentPage : currentPage + 1 }}`,
         items_per_page: limit,
         prev_page_url: `{\/?page=${currentPage > 1 ? currentPage - 1 : currentPage}}`,
-        to: totalItems < limit ? totalItems : limit * currentPage,
+        to: totalItems < limit * currentPage ? totalItems : limit * currentPage,
         total: totalItems,
         links: paginationlinks
 	};

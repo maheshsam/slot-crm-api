@@ -1,13 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { NotFoundException, ConflictException } from '@nestjs/common';
-import { Repository, In, createQueryBuilder, Brackets } from 'typeorm';
+import { NotFoundException,ForbiddenException, ConflictException, BadRequestException } from '@nestjs/common';
+import { Repository, In, createQueryBuilder, Brackets, Not } from 'typeorm';
 import { User } from '../../entity/User';
 import { UserDetails } from '../../entity/UserDetails';
 import { Role } from '../../entity/Role';
 import { Permission } from '../../entity/Permission';
 import { Location } from '../../entity/Location';
 import { CreateUserDto } from './dtos/create-user.dto';
+import { UpdateUserDto } from './dtos/update-user.dto';
 import { GetUsersDto } from './dtos/get-users.dto';
 import { RegisterUserDto } from './dtos/register-user.dto';
 import { MasterDataService } from '../masterdata/masterdata.service';
@@ -15,6 +16,7 @@ import { createPaginationObject, Pagination } from "../../lib/pagination";
 import { randomBytes, scrypt as _scrypt } from 'crypto';
 import { promisify } from 'util';
 import { KafkaProducerService } from '../../lib/kafka/producer.service';
+const getmac = require('getmac')
 
 const scrypt = promisify(_scrypt);
 
@@ -162,5 +164,100 @@ export class UsersService {
 		// 	this.kafkaProducerService.publish('user_created',{name: user.full_name, email: user.email});
 		// }
 		return user;
+	}
+
+	async update(userId: number, body: UpdateUserDto) {
+		const { email, mobile } = body;
+		const user = await this.repoUser.findOne({where:{id:userId}});
+		if(!user){
+			throw new NotFoundException('User not found');
+		}
+		const userEmailExists = await this.repoUser.findOne({where:{email,id:Not(userId)}});
+		if (userEmailExists) {
+	      throw new ConflictException('User with email already exists');
+	    }
+		user.full_name = body.full_name;
+		user.is_active = body.is_active;
+		if(body.device_lock){
+			user.device_lock = body.device_lock;
+			if(body.device_details && body.device_details !== ""){
+				user.device_details = body.device_details;
+			}else{
+				user.device_details = getmac.default();
+			}
+		}else{
+			user.device_lock = body.device_lock
+		}
+		if(body.password && body.password !== ""){
+			if(!body.confirm_password || body.confirm_password == ""){
+				throw new BadRequestException('Please enter confirm password')
+			}else{
+				if(body.password !== body.confirm_password){
+					throw new BadRequestException('Password and Confirm password does not match')
+				}
+			}
+		}
+		if(body.password && body.password !== ""){
+			const password = await this.hashUserPassword(body.password);
+			user.password = password
+		}
+		if(email && email !== ""){
+			user.email = email
+		}
+		if(mobile && mobile !== null){
+			user.mobile = mobile
+		}
+
+		if(body.roles){
+			const roles = await this.repoRole.find({where: {id: In(body.roles)}});
+			if(roles){
+				user.roles = roles;
+			}
+		}
+
+		if(body.location_id){
+			const location = await this.repoLocation.findOne({where: {id: body.location_id}});
+			if(location){
+				user.userLocation = location;
+			}
+		}
+
+		if(body.permissions){
+			const permissions = await this.repoPermission.find({where: {id: In(body.permissions)}});
+			if(permissions){
+				user.permissions = permissions;
+			}
+		}
+
+
+		if(body.first_name && body.first_name == ""){
+			user.userDetails.first_name = body.first_name;
+		}
+		if(body.last_name && body.last_name == ""){
+			user.userDetails.last_name = body.last_name;
+		}
+		if(body.city && body.city != ""){
+			user.userDetails.city = body.city;
+		}
+		if(body.state && body.state != ""){
+			user.userDetails.state = body.state;
+		}
+		if(body.country && body.country != ""){
+			user.userDetails.country = body.country;
+		}
+		
+		await this.repoUser.save(user);
+		return user;
+	}
+
+	async delete(userId: number) {
+		if(userId == 1){
+			throw new ForbiddenException("Not allowed to delete this user");
+		}
+		const user = await this.repoUser.findOne({ where: {id: userId}});
+		if(!user){
+			throw new NotFoundException('User not found');
+		}
+		return this.repoUser.remove(user);
 	}
 }
