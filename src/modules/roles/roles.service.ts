@@ -23,14 +23,16 @@ export class RolesService{
     }
 
 	async create(roleDto: CreateRoleDto) {
-		const {name, guard_name, permissions} = roleDto;
+		const {name, permissions} = roleDto;
 		const roleNameExists = await this.repoRole.findOne({where:{name}});
 	    if (roleNameExists) {
 	      throw new ConflictException('Role with given name already exists');
 	    }
-		const role = this.repoRole.create({name, guard_name});
+		const role = this.repoRole.create({name});
 		await this.repoRole.save(role);
-		await this.assignPermissions(role.id,{permissions});
+		if(permissions && permissions.length > 0){
+			await this.assignPermissions(role.id,{permissions});
+		}
 		return role;
 	}
 
