@@ -1,17 +1,19 @@
-import { Controller, Get, Body, Post, Patch, Delete, Param } from '@nestjs/common';
+import { Controller, Get, Body, Post, Patch, Delete, Param, Query } from '@nestjs/common';
 import { LocationsService } from './locations.service';
 import { CreateLocationDto } from './dtos/create-location.dto';
 import { UpdateLocationDto } from './dtos/update-location.dto';
+import { GetLocationsDto } from './dtos/get-locations.dto';
 import { HasPermissions } from '../../common/decorators/has-permissions.decorator';
 
 @Controller('locations')
 export class LocationsController{
 	constructor(private locationsService: LocationsService){}
 
-	@Get()
+	@Get('/:id?')
 	@HasPermissions('view_locations')
-	list(){
-		return this.locationsService.find();
+	list(@Param('id') locationId?: number, @Query() qry?: GetLocationsDto){
+		const args = {...qry!, location_id: locationId};
+		return this.locationsService.find(args);
 	}
 
 	@Post()

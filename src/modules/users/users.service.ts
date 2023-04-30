@@ -16,8 +16,8 @@ import { createPaginationObject, Pagination } from "../../lib/pagination";
 import { randomBytes, scrypt as _scrypt } from 'crypto';
 import { promisify } from 'util';
 import { KafkaProducerService } from '../../lib/kafka/producer.service';
-const getmac = require('getmac')
 
+const getmac = require('getmac')
 const scrypt = promisify(_scrypt);
 
 
@@ -35,7 +35,7 @@ export class UsersService {
 
 	async getUsers(args?: GetUsersDto){
 		const page = args.page || 1;
-		const limit = args.items_per_page || 10;
+		const limit = args.items_per_page || 100000;
 		if(args.user_id && args.user_id != undefined){
 			return this.repoUser.find({where: {id: args.user_id}, relations: { roles: true, permissions: true }});
 		}
