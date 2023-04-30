@@ -51,6 +51,11 @@ export class UpdateLocationDto {
 	country: string;
 
 	@ApiProperty()
+	@IsOptional()
+	@IsBoolean()
+	is_active: boolean;
+
+	@ApiProperty()
 	@IsNumber()
 	userId: number;
 }

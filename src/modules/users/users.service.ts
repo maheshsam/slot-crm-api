@@ -37,13 +37,14 @@ export class UsersService {
 		const page = args.page || 1;
 		const limit = args.items_per_page || 100000;
 		if(args.user_id && args.user_id != undefined){
-			return this.repoUser.find({where: {id: args.user_id}, relations: { roles: true, permissions: true }});
+			return this.repoUser.find({where: {id: args.user_id}, relations: { roles: true, permissions: true, userLocation: true }});
 		}
 		try{
 			if(Object.keys(args).length > 0){
 				const usersQuery = this.repoUser.createQueryBuilder("user");
 				usersQuery.leftJoinAndSelect("user.userDetails", "user_details");
 				usersQuery.leftJoinAndSelect("user.roles", "role");
+				usersQuery.leftJoinAndSelect("user.userLocation", "location");
 				if(args.search && args.search != ""){
 					usersQuery.where("LOWER(user.email) LIKE LOWER(:qry) OR LOWER(user.mobile) LIKE LOWER(:qry) OR LOWER(user.full_name) LIKE LOWER(:qry) OR LOWER(user_details.first_name) LIKE LOWER(:qry) OR LOWER(user_details.middle_name) LIKE LOWER(:qry) OR LOWER(user_details.last_name) LIKE LOWER(:qry) OR LOWER(user_details.city) LIKE LOWER(:qry) OR LOWER(user_details.state) LIKE LOWER(:qry) OR LOWER(user_details.country) LIKE LOWER(:qry)", { qry: `%${args.search}%` });
 				}
@@ -214,8 +215,8 @@ export class UsersService {
 				user.roles = roles;
 			}
 		}
-
-		if(body.location_id){
+		console.log("body.location_id",body.location_id);
+		if(body.location_id && body.location_id !== null){
 			const location = await this.repoLocation.findOne({where: {id: body.location_id}});
 			if(location){
 				user.userLocation = location;
