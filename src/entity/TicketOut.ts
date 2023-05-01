@@ -16,18 +16,18 @@ export class TicketOut {
     @Column()
     machine_number: number
 
-    @OneToOne((type) => Customer)
+    @ManyToOne((type) => Customer)
     @JoinColumn()
     customer: Customer
 
     @Column({nullable: true, type: 'text'})
     ticket_out_photo: string
 
-    @OneToOne((type) => User)
+    @ManyToOne((type) => User)
     @JoinColumn()
     added_by: User
 
-    @OneToOne((type) => Location)
+    @ManyToOne((type) => Location)
     @JoinColumn()
     location: Location
 

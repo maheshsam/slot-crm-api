@@ -60,11 +60,11 @@ export class Customer {
     @Column({ default: false })
     is_verified: boolean
 
-    @OneToOne((type) => User)
+    @ManyToOne((type) => User)
     @JoinColumn()
     added_by: User
 
-    @OneToOne((type) => Location)
+    @ManyToOne((type) => Location)
     @JoinColumn()
     location: Location
 

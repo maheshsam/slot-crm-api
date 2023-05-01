@@ -37,7 +37,6 @@ export class UsersController{
 	@HasPermissions('update_users')
 	updateUser(@LoggedInUser() loggedInUser: User, @Body() body: UpdateUserDto, @Param('id') userId?: number){
 		const args = {body, userId, loggedInUser};
-		console.log("loggedInUser",loggedInUser);
 		return this.usersService.update(args);
 	}
 

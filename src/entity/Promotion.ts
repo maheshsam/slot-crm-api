@@ -37,18 +37,18 @@ export class Promotion {
     @Column()
     prize_details: string
 
-    @OneToOne((type) => Customer)
+    @ManyToOne((type) => Customer)
     @JoinColumn()
     customer: Customer
 
     @Column({nullable: true, type: 'text'})
     promotion_customer_photo: string
 
-    @OneToOne((type) => User)
+    @ManyToOne((type) => User)
     @JoinColumn()
     added_by: User
 
-    @OneToOne((type) => Location)
+    @ManyToOne((type) => Location)
     @JoinColumn()
     location: Location
 

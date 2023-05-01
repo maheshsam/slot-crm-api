@@ -20,14 +20,16 @@ export class CustomersController{
 
 	@Post()
 	@HasPermissions('add_customers')
-	createCustomer(@LoggedInUser() user: User, @Body() body: CreateCustomerDto){
-		return this.customersService.create(user,body);
+	createCustomer(@LoggedInUser() loggedInUser: User, @Body() body: CreateCustomerDto){
+		const args = {body, loggedInUser};
+		return this.customersService.create(args);
 	}
 
 	@Patch('/:customerid')
 	@HasPermissions('update_customers')
-	updateCustomer(@Param('customerid') customerId: string, @Body() body: UpdateCustomerDto){
-		return this.customersService.update(parseInt(customerId),body);
+	updateCustomer(@LoggedInUser() loggedInUser: User, @Param('customerid') customerId: string, @Body() body: UpdateCustomerDto){
+		const args = {body, customerId: parseInt(customerId), loggedInUser};
+		return this.customersService.update(args);
 	}
 
 	@Delete('/:customerid')

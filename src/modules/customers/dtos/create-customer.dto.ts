@@ -9,6 +9,10 @@ export class CreateCustomerDto {
 	@ApiProperty()
 	@IsString()
 	last_name: string
+
+	@ApiProperty()
+	@IsString()
+	photo: string
 	
 	@ApiProperty()
 	@IsNumber()
@@ -38,7 +42,7 @@ export class CreateCustomerDto {
 	@ApiProperty()
 	@IsBoolean()
 	@IsOptional()	
-	is_verified
+	is_verified: boolean
 	
 	@ApiProperty()
 	@IsString()

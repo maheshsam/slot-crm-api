@@ -25,19 +25,19 @@ export class MatchPoint {
     @Column({nullable: true, type: 'datetime'})
     machine_assign_datetime: string    
 
-    @OneToOne((type) => Customer)
+    @ManyToOne((type) => Customer)
     @JoinColumn()
     customer: Customer
 
-    @OneToOne((type) => User)
+    @ManyToOne((type) => User)
     @JoinColumn()
     added_by: User
 
-    @OneToOne((type) => User)
+    @ManyToOne((type) => User)
     @JoinColumn()
     current_user: User
 
-    @OneToOne((type) => Location)
+    @ManyToOne((type) => Location)
     @JoinColumn()
     location: Location
 

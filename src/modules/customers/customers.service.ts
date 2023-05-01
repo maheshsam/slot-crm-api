@@ -6,6 +6,7 @@ import { UpdateCustomerDto } from './dtos/update-customer.dto';
 import { GetCustomersDto } from './dtos/get-customers.dto';
 import { Customer } from '../../entity/Customer';
 import { User } from '../../entity/User';
+import { hasSuperRole } from 'src/lib/misc';
 
 @Injectable()
 export class CustomersService{
@@ -42,7 +43,11 @@ export class CustomersService{
 		return this.repo.find({relations: { added_by: true }});
 	}
 
-	async create(user: User,customerDto: CreateCustomerDto) {
+	async create(args: any) {
+		const loggedInUser = args.loggedInUser;
+		// const isSuperRole = hasSuperRole(loggedInUser);
+		const customerDto: CreateCustomerDto = args.body;
+
 		const customerNameExists = await this.repo.findOne({where:{phone: customerDto.phone.toString()}});
 	    if (customerNameExists) {
 	      throw new ConflictException('Customer with given phone already exists');
@@ -50,9 +55,9 @@ export class CustomersService{
 
 	    const phone_otp = Math.floor(1000 + Math.random() * 9000);
 	    customerDto.phone_otp = phone_otp;
-		if(user && user.id){
-	    	customerDto.added_by = user;
-			customerDto.location = user.userLocation;
+		if(loggedInUser && loggedInUser.id){
+	    	customerDto.added_by = loggedInUser;
+			customerDto.location = loggedInUser.userLocation;
 			const customer = this.repo.create(customerDto);
 			return this.repo.save(customer);
 		}else{
@@ -60,7 +65,11 @@ export class CustomersService{
 		}
 	}
 
-	async update(customerId: number, customerDto:UpdateCustomerDto) {
+	async update(args: any) {
+		// const loggedInUser = args.loggedInUser;
+		// const isSuperRole = hasSuperRole(loggedInUser);
+		const customerDto: UpdateCustomerDto = args.body;
+		const customerId: number = args.customerId;
 		const customerNameExists = await this.repo.findOne({where:{phone: customerDto.phone, id: Not(Equal(customerId))}});
 	    if (customerNameExists) {
 	      throw new ConflictException('Customer with given phone number already exists');
