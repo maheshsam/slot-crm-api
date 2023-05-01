@@ -22,6 +22,7 @@ export class RolesController{
 
 	@Patch('/permissions/:roleid')
 	// @HasPermissions('assign_role_permission')
+	@HasPermissions('update_roles')
 	assignPermissions(@Param('roleid') roleId: string, @Body() body: AssignRolePermissionsDto) {
 		return this.rolesService.assignPermissions(parseInt(roleId), body);
 	}

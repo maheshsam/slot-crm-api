@@ -28,7 +28,15 @@ export class RolesService{
 	    if (roleNameExists) {
 	      throw new ConflictException('Role with given name already exists');
 	    }
-		const role = this.repoRole.create({name});
+		let insert = {};
+		insert['name'] = roleDto.name;
+		if(roleDto.is_super !== undefined){
+			insert['is_super'] = roleDto.is_super;
+ 		}
+		if(roleDto.guard_name !== undefined){
+			insert['guard_name'] = roleDto.guard_name;
+ 		}
+		const role = this.repoRole.create(insert);
 		await this.repoRole.save(role);
 		if(permissions && permissions.length > 0){
 			await this.assignPermissions(role.id,{permissions});

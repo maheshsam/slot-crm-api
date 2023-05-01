@@ -31,7 +31,7 @@ export class MatchPoint {
 
     @OneToOne((type) => User)
     @JoinColumn()
-    created_by: User
+    added_by: User
 
     @OneToOne((type) => User)
     @JoinColumn()

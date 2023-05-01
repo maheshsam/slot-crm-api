@@ -42,4 +42,7 @@ export class GetUsersDto{
 	@IsOptional()
 	status: string
 
+	@IsOptional()
+	loggedInUser: any
+
 }

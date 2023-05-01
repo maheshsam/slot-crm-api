@@ -25,7 +25,7 @@ export class TicketOut {
 
     @OneToOne((type) => User)
     @JoinColumn()
-    created_by: User
+    added_by: User
 
     @OneToOne((type) => Location)
     @JoinColumn()

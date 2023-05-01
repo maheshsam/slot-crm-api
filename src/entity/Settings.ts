@@ -1,5 +1,6 @@
-import { Entity, Column, PrimaryGeneratedColumn } from "typeorm";
-import { Persistable } from "./Persistable";
+import { Entity, Column, PrimaryGeneratedColumn, ManyToMany, JoinColumn } from 'typeorm';
+import { Persistable } from './Persistable';
+import { Location } from './Location';
 
 @Entity()
 export class Settings{
@@ -11,6 +12,10 @@ export class Settings{
 
 	@Column({ type: "text" })
 	settings_value: string
+
+	@ManyToMany((type) => Location)
+    @JoinColumn()
+    location: Location
 
 	@Column(() => Persistable, { prefix: false })
     persistable: Persistable;

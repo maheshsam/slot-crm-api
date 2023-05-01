@@ -68,7 +68,7 @@ export class AuthService {
 				id: user.id,
 				name: user.full_name,
 				permissions: allPermissions,
-				roles: user.roles.map((item) => { return item.name }),
+				roles: user.roles.map((item) => { return { name:item.name, is_super: item.is_super } } ),
 				location: user.userLocation,
 			},
 			payload: {

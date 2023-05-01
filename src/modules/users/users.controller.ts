@@ -7,6 +7,8 @@ import { GetUsersDto } from './dtos/get-users.dto';
 // import { JwtAuthGuard, ACGuard } from '../../common/guards/index';
 import { UpdateUserDto } from './dtos/update-user.dto';
 import { HasPermissions } from '../../common/decorators/index';
+import { LoggedInUser } from '../../common/decorators/index';
+import { User } from '../../entity/User';
 
 @Controller('users')
 export class UsersController{
@@ -19,26 +21,29 @@ export class UsersController{
 
 	@Get('/:id?')
 	@HasPermissions('view_users')
-	listUsers(@Param('id') userId?: number, @Query() qry?: GetUsersDto){
-		const args = {...qry!, user_id: userId};
+	listUsers(@LoggedInUser() loggedInUser: User, @Param('id') userId?: number, @Query() qry?: GetUsersDto){
+		const args = {...qry!, user_id: userId, loggedInUser};
 		return this.usersService.getUsers(args);
 	}
 
 	@Post()
 	@HasPermissions('add_users')
-	createUser(@Body() body: CreateUserDto ){
-		return this.usersService.create(body);
+	createUser(@LoggedInUser() loggedInUser: User, @Body() body: CreateUserDto ){
+		const args = {body, loggedInUser};
+		return this.usersService.create(args);
 	}
 
 	@Patch('/:id')
 	@HasPermissions('update_users')
-	updateUser(@Body() body: UpdateUserDto, @Param('id') userId?: number){
-		return this.usersService.update(userId,body);
+	updateUser(@LoggedInUser() loggedInUser: User, @Body() body: UpdateUserDto, @Param('id') userId?: number){
+		const args = {body, userId, loggedInUser};
+		console.log("loggedInUser",loggedInUser);
+		return this.usersService.update(args);
 	}
 
 	@Delete('/:id')
 	@HasPermissions('delete_users')
 	deleteSettings(@Param('id') id: string){
-		return this.usersService.delete(parseInt(id));		
+		return this.usersService.delete(parseInt(id));
 	}
 }

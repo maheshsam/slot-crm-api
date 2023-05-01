@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, Generated, OneToOne, ManyToMany, OneToMany, JoinTable, JoinColumn } from "typeorm";
+import { Entity, PrimaryGeneratedColumn, Column, Generated, OneToOne, ManyToMany, OneToMany, JoinTable, JoinColumn, ManyToOne } from "typeorm";
 import { Persistable } from "./Persistable";
 import { UserDetails } from "./UserDetails";
 import { Location } from "./Location";
@@ -46,7 +46,7 @@ export class User {
     @JoinColumn()
     userDetails: UserDetails
 
-    @OneToOne((type) => Location)
+    @ManyToOne((type) => Location)
     @JoinColumn()
     userLocation: Location
 

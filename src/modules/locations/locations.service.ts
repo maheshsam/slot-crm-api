@@ -56,7 +56,9 @@ export class LocationsService{
 		return this.repo.findOne({ where: {id}, relations: { owner: true }});
 	}
 
-	async create(locationDto: CreateLocationDto) {
+	async create(args: any) {
+		const loggedInUser: User = args.loggedInUser;
+		const locationDto: CreateLocationDto = args.body;
 		const locationNameExists = await this.repo.findOne({where:{location_name: locationDto.location_name}});
 	    if (locationNameExists) {
 	      	throw new ConflictException('Location with given name already exists');
@@ -69,6 +71,7 @@ export class LocationsService{
 		let ownerErrMsg = '';
 		if(owner){
 			const locationOwnerExists = await this.repo.find({where:{owner}});
+			// console.log("locationOwnerExists",locationOwnerExists);
 			if(locationOwnerExists.length > 0){
 				ownerErrMsg = 'Owner has been already assigned to different location';
 				throw new NotAcceptableException(ownerErrMsg);
@@ -84,10 +87,21 @@ export class LocationsService{
 				location.owner = user;
 			}
 		}
-		return this.repo.save(location);
+		await this.repo.save(location);
+		if(loggedInUser){
+			location.persistable.created_by = args.loggedInUser;
+		}
+		await this.repoUser.save(location);
+		owner.userLocation = location;
+		await this.repoUser.save(owner);
+		return location;
 	}
 
-	async update(locationId: number, locationDto:UpdateLocationDto) {
+	async update(args: any) {
+		const loggedInUser: User = args.loggedInUser;
+		const locationId: number = args.locationId;
+		const locationDto: UpdateLocationDto = args.locationDto;
+
 		const locationNameExists = await this.repo.findOne({where:{location_name: locationDto.location_name, id: Not(Equal(locationId))}});
 	    if (locationNameExists) {
 	      throw new ConflictException('Location with given name already exists');
@@ -120,6 +134,12 @@ export class LocationsService{
 				location.owner = user;
 			}
 		}
+		if(loggedInUser){
+			location.persistable.updated_by = args.loggedInUser;
+		}
+		await this.repoUser.save(location);
+		owner.userLocation = location;
+		await this.repoUser.save(owner);
 		return location;
 	}
 

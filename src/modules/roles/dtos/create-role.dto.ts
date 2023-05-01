@@ -8,16 +8,16 @@ export class CreateRoleDto {
 
 	@ApiProperty()
 	@IsOptional()
-	is_super: boolean;
+	is_super?: boolean;
 
 	@ApiProperty()
 	@IsOptional()
 	@IsString()
-	guard_name: string;
+	guard_name?: string;
 
 	@ApiProperty()
 	@IsOptional()
 	@IsNotEmpty()
 	@IsNumber({}, { each: true })
-	permissions: number[]
+	permissions?: number[]
 }

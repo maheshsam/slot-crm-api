@@ -17,7 +17,7 @@ export class MatchpointsService{
 
 	async find(args?: GetMatchpointsDto){
 		if(args.matchpoint_id && args.matchpoint_id != undefined){
-			return this.repo.find({where: {id: args.matchpoint_id}, relations: { created_by: true }});
+			return this.repo.find({where: {id: args.matchpoint_id}, relations: { added_by: true }});
 		}
 		try{
 			if(Object.keys(args).length > 0){
@@ -41,7 +41,7 @@ export class MatchpointsService{
 		}catch(e){
 			console.log(e);
 		}
-		return this.repo.find({relations: { created_by: true }});
+		return this.repo.find({relations: { added_by: true }});
 	}
 
 	async checkin(user: User,checkInDto: CreateCheckInDto) {

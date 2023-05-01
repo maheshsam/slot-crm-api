@@ -1,6 +1,6 @@
 import { Controller, Get, Body, Post, Patch, Delete, Param, Query } from '@nestjs/common';
 import { CustomersService } from './customers.service';
-import { LoggedInUser, Auth } from '../../common/decorators/index';
+import { LoggedInUser } from '../../common/decorators/index';
 import { CreateCustomerDto } from './dtos/create-customer.dto';
 import { UpdateCustomerDto } from './dtos/update-customer.dto';
 import { GetCustomersDto } from "./dtos/get-customers.dto";
@@ -13,8 +13,8 @@ export class CustomersController{
 
 	@Get('/:userId?')
 	@HasPermissions('view_customers')
-	list(@Param('userId') userId?: number, @Query() qry?: GetCustomersDto){
-		const args = {...qry!, user_id: userId};
+	list(@LoggedInUser() user: User, @Param('userId') userId?: number, @Query() qry?: GetCustomersDto){
+		const args = {...qry!, user_id: userId, loggedInUser: user};
 		return this.customersService.find(args);
 	}
 

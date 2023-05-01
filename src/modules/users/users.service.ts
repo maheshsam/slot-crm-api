@@ -16,6 +16,7 @@ import { createPaginationObject, Pagination } from "../../lib/pagination";
 import { randomBytes, scrypt as _scrypt } from 'crypto';
 import { promisify } from 'util';
 import { KafkaProducerService } from '../../lib/kafka/producer.service';
+import { hasSuperRole } from '../../lib/misc';
 
 const getmac = require('getmac')
 const scrypt = promisify(_scrypt);
@@ -34,10 +35,16 @@ export class UsersService {
 	){}
 
 	async getUsers(args?: GetUsersDto){
+		const loggedInUser = args.loggedInUser;
+		const isSuperRole = hasSuperRole(loggedInUser);
 		const page = args.page || 1;
 		const limit = args.items_per_page || 100000;
 		if(args.user_id && args.user_id != undefined){
-			return this.repoUser.find({where: {id: args.user_id}, relations: { roles: true, permissions: true, userLocation: true }});
+			if(isSuperRole){
+				return this.repoUser.find({where: {id: args.user_id}, relations: { roles: true, permissions: true, userLocation: true }});
+			}else{
+				return this.repoUser.find({where: {id: args.user_id, userLocation: loggedInUser.userLocation}, relations: { roles: true, permissions: true, userLocation: true }});
+			}
 		}
 		try{
 			if(Object.keys(args).length > 0){
@@ -48,23 +55,29 @@ export class UsersService {
 				if(args.search && args.search != ""){
 					usersQuery.where("LOWER(user.email) LIKE LOWER(:qry) OR LOWER(user.mobile) LIKE LOWER(:qry) OR LOWER(user.full_name) LIKE LOWER(:qry) OR LOWER(user_details.first_name) LIKE LOWER(:qry) OR LOWER(user_details.middle_name) LIKE LOWER(:qry) OR LOWER(user_details.last_name) LIKE LOWER(:qry) OR LOWER(user_details.city) LIKE LOWER(:qry) OR LOWER(user_details.state) LIKE LOWER(:qry) OR LOWER(user_details.country) LIKE LOWER(:qry)", { qry: `%${args.search}%` });
 				}
+
+				if(!isSuperRole){
+					usersQuery.andWhere("user.userLocationId IS NOT NULL AND user.userLocationId = :userLocationId",{userLocationId: loggedInUser.userLocation ? loggedInUser.userLocation.id : 0});
+				}
 				if(args.status !== undefined && args.status !== ""){
-					usersQuery.where("user.is_active = :status",{status: String(args.status) == '1' ? true : false});
+					usersQuery.andWhere("user.is_active = :status",{status: String(args.status) == '1' ? true : false});
 				}
 				if(args.gender && args.gender != ""){
 					const genders = args.gender.split(",");
-					usersQuery.where("user_details.gender IN (:gender)",{ gender: genders});
+					usersQuery.andWhere("user_details.gender IN (:gender)",{ gender: genders});
 				}
 				if(args.role && args.role != ""){
-					const roles = await this.repoRole.find({where: { id: In(args.role.split(",").map( Number ))}});
-					if(roles.length > 0){
-						const roleIds = roles.map((item) => {
-							return item.id;
-						})
-						usersQuery.where("role.id IN (:roles)",{ roles: roleIds});
-					}else{
-						usersQuery.where("role.id = :role",{ role: 0});
-					}
+					usersQuery.andWhere("role.id IN (:roles)",{ roles: args.role.split(",").map( Number )});
+					// const roles = await this.repoRole.find({where: { id: In(args.role.split(",").map( Number ))}});
+					// conso
+					// if(roles.length > 0){
+					// 	const roleIds = roles.map((item) => {
+					// 		return item.id;
+					// 	})
+					// 	usersQuery.where("role.id IN (:roles)",{ roles: roleIds});
+					// }else{
+					// 	usersQuery.where("role.id = :role",{ role: 0});
+					// }
 				}
 				
 			//     // users.where(new Brackets(qb => {
@@ -81,8 +94,11 @@ export class UsersService {
 		}catch(e){
 			console.log(e);
 		}
-		// return { "data": this.repoUser.find({relations: { roles: true, permissions: true }}), "payload": payload };
-		return createPaginationObject<User>(await this.repoUser.find({relations: { roles: true, permissions: true }}), await this.repoUser.count(), page, limit);
+		if(isSuperRole){
+			return createPaginationObject<User>(await this.repoUser.find({relations: { roles: true, permissions: true }}), await this.repoUser.count(), page, limit);
+		}else{
+			return createPaginationObject<User>(await this.repoUser.find({where: {userLocation: loggedInUser.userLocation}, relations: { roles: true, permissions: true }}), await this.repoUser.count(), page, limit);
+		}
 	}
 
 	async hashUserPassword(password: string){
@@ -107,7 +123,10 @@ export class UsersService {
 		return await this.repoUser.save(userInsert);
 	}
 
-	async create(body: CreateUserDto) {
+	async create(args: any) {
+		const loggedInUser = args.loggedInUser;
+		const isSuperRole = hasSuperRole(loggedInUser);
+		const body: CreateUserDto = args.body;
 		const password = await this.hashUserPassword(body.password);
 		const { email, mobile } = body;
 		const userEmailExists = await this.repoUser.findOne({where:{email}});
@@ -125,7 +144,7 @@ export class UsersService {
 		const userInsert: Partial<User> = {full_name,email,mobile,password,username};
 
 		const user = this.repoUser.create(userInsert);
-
+		// console.log(args.loggedInUser);
 		if(body.roles){
 			const roles = await this.repoRole.find({where: {id: In(body.roles)}});
 			if(roles){
@@ -138,6 +157,8 @@ export class UsersService {
 			if(location){
 				user.userLocation = location;
 			}
+		}else if(!isSuperRole){
+			user.userLocation = loggedInUser.userLocation;
 		}
 
 		if(body.permissions){
@@ -161,13 +182,21 @@ export class UsersService {
 		await this.repoUserDetails.save(userDetails);
 		user.userDetails = userDetails;
 		await this.repoUser.save(user);
+		if(args.loggedInUser){
+			user.persistable.created_by = args.loggedInUser;
+		}
+		await this.repoUser.save(user);
 		// if(user){
 		// 	this.kafkaProducerService.publish('user_created',{name: user.full_name, email: user.email});
 		// }
 		return user;
 	}
 
-	async update(userId: number, body: UpdateUserDto) {
+	async update(args: any) {
+		const loggedInUser = args.loggedInUser;
+		const isSuperRole = hasSuperRole(loggedInUser);
+		const userId: number = args.userId;
+		const body: UpdateUserDto = args.body;
 		const { email, mobile } = body;
 		const user = await this.repoUser.findOne({where:{id:userId}});
 		if(!user){
@@ -179,6 +208,10 @@ export class UsersService {
 	    }
 		user.full_name = body.full_name;
 		user.is_active = body.is_active;
+		if(args.loggedInUser){
+			user.persistable.updated_by = args.loggedInUser;
+		}
+		// await this.repoUser.save(user);
 		if(body.device_lock){
 			user.device_lock = body.device_lock;
 			if(body.device_details && body.device_details !== ""){
@@ -215,12 +248,13 @@ export class UsersService {
 				user.roles = roles;
 			}
 		}
-		console.log("body.location_id",body.location_id);
 		if(body.location_id && body.location_id !== null){
 			const location = await this.repoLocation.findOne({where: {id: body.location_id}});
 			if(location){
 				user.userLocation = location;
 			}
+		}else if(!isSuperRole){
+			user.userLocation = loggedInUser.userLocation;
 		}
 
 		if(body.permissions){
