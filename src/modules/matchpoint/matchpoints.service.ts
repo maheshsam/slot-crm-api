@@ -83,14 +83,14 @@ export class MatchpointsService{
 			if(!matchpoint){
 				throw new NotFoundException;
 			}else{
-				return this.repo.delete(matchpoint);	
+				return this.repo.remove(matchpoint);	
 			}
 		}else{
 			const matchpoint = await this.repo.findOne({ where: {id: matchpointId, location: loggedInUser.userLocation}});
 			if(!matchpoint){
 				throw new NotFoundException;
 			}else{
-				return this.repo.delete(matchpoint);	
+				return this.repo.remove(matchpoint);	
 			}
 		}
 	}

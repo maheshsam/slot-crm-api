@@ -25,8 +25,8 @@ export class MatchpointsController{
 		return this.matchpointsService.checkin(args);
 	}
 
-	@Patch('/assign/machine/:matchpointid')
-	@HasPermissions('assign_machine')
+	@Patch('/finalised/:matchpointid')
+	@HasPermissions('finalised_matchpoint')
 	updateMatchpoint(@LoggedInUser() loggedInUser: User, @Param('matchpointid') matchpointId: string, @Body() body: AssignMachineNumber){
 		const args = {body, loggedInUser, matchpointId: parseInt(matchpointId)};
 		return this.matchpointsService.assignMachineNumber(args);

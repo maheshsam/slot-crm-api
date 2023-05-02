@@ -130,14 +130,14 @@ export class CustomersService{
 			if(!customer){
 				throw new NotFoundException;
 			}else{
-				return this.repo.delete(customer);	
+				return this.repo.remove(customer);	
 			}
 		}else{
 			const customer = await this.repo.findOne({ where: {id: customerId, location: loggedInUser.userLocation}});
 			if(!customer){
 				throw new NotFoundException;
 			}else{
-				return this.repo.delete(customer);	
+				return this.repo.remove(customer);	
 			}
 		}
 	}
