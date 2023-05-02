@@ -32,8 +32,9 @@ export class MatchpointsService{
 				if(args.qry && args.qry != ""){
 					matchpointsQuery.where("LOWER(matchpoint.first_name) LIKE LOWER(:qry) OR LOWER(matchpoint.last_name) LIKE LOWER(:qry) OR matchpoint.phone LIKE LOWER(:qry) OR matchpoint.dob LIKE LOWER(:qry) OR matchpoint.driving_license LIKE LOWER(:qry) OR LOWER(matchpoint.city) LIKE LOWER(:qry) OR LOWER(matchpoint.state) LIKE LOWER(:qry) OR LOWER(matchpoint.country) LIKE LOWER(:qry) OR LOWER(matchpoint.comments) LIKE LOWER(:qry)", { qry: `%${args.qry}%` });
 				}
+				
 				if(args.status != undefined){
-					matchpointsQuery.where("matchpoint.status = :status",{ status: args.status});
+					matchpointsQuery.where("matchpoint.status = :status",{ status: Number(args.status) == 1 ? true : false});
 				}
 				if(args.created_daterange && args.created_daterange != ""){
 					const genders = args.created_daterange.split("/");

@@ -19,14 +19,14 @@ export class MatchpointsController{
 	}
 
 	@Post()
-	@HasPermissions('add_check_in')
+	@HasPermissions('check_in_customer')
 	createMatchpoint(@LoggedInUser() loggedInUser: User, @Body() body: CreateCheckInDto){
 		const args = {body, loggedInUser};
 		return this.matchpointsService.checkin(args);
 	}
 
 	@Patch('/assign/machine/:matchpointid')
-	@HasPermissions('assign_machine_number')
+	@HasPermissions('assign_machine')
 	updateMatchpoint(@LoggedInUser() loggedInUser: User, @Param('matchpointid') matchpointId: string, @Body() body: AssignMachineNumber){
 		const args = {body, loggedInUser, matchpointId: parseInt(matchpointId)};
 		return this.matchpointsService.assignMachineNumber(args);

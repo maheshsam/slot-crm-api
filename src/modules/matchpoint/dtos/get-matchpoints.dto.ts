@@ -32,7 +32,7 @@ export class GetMatchpointsDto{
 
 	@ApiProperty()
 	@IsOptional()
-	status: boolean
+	status: string
 
 	
 	@ApiProperty()

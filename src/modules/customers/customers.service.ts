@@ -20,6 +20,7 @@ export class CustomersService{
 		const isSuperRole = hasSuperRole(loggedInUser);
 		const page = args.page || 1;
 		const limit = args.items_per_page || 100000;
+		console.log("args.status",args.status, typeof args.status)
 		if(args.customer_id && args.customer_id != undefined){
 			if(isSuperRole){
 				return this.repo.findOne({where: {id: args.customer_id}, relations: { added_by: true }});
