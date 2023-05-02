@@ -1,5 +1,6 @@
-import { IsString, IsInt, IsOptional } from 'class-validator';
+import { IsOptional } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+import { User } from 'src/entity/User';
 
 export class GetCustomersDto{
 	@ApiProperty()
@@ -8,17 +9,32 @@ export class GetCustomersDto{
 
 	@ApiProperty()
 	@IsOptional()
-	qry!: string
+	phone!: number
 
 	@ApiProperty()
 	@IsOptional()
-	is_active!: boolean
+	search!: string
 
 	@ApiProperty()
 	@IsOptional()
-	is_verified!: boolean
+	status!: string
+
+	@ApiProperty()
+	@IsOptional()
+	isverified!: string
 
 	@ApiProperty()
 	@IsOptional()
 	created_daterange!: string
+
+	@ApiProperty()
+	@IsOptional()
+	page!: number
+
+	@ApiProperty()
+	@IsOptional()
+	items_per_page!: number
+	
+	@IsOptional()
+	loggedInUser: User
 }

@@ -11,6 +11,10 @@ export class UpdateCustomerDto {
 	last_name: string
 	
 	@ApiProperty()
+	@IsString()
+	photo: string
+	
+	@ApiProperty()
 	@IsNumber()
 	phone: string
 

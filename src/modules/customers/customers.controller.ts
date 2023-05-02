@@ -11,10 +11,10 @@ import { User } from '../../entity/User';
 export class CustomersController{
 	constructor(private customersService: CustomersService){}
 
-	@Get('/:userId?')
+	@Get('/:customerId?')
 	@HasPermissions('view_customers')
-	list(@LoggedInUser() user: User, @Param('userId') userId?: number, @Query() qry?: GetCustomersDto){
-		const args = {...qry!, user_id: userId, loggedInUser: user};
+	list(@LoggedInUser() loggedInUser: User, @Param('customerId') customerId?: number, @Query() qry?: GetCustomersDto){
+		const args = {...qry!, customer_id: customerId, loggedInUser};
 		return this.customersService.find(args);
 	}
 
@@ -34,8 +34,9 @@ export class CustomersController{
 
 	@Delete('/:customerid')
 	@HasPermissions('delete_customers')
-	deleteCustomer(@Param('customerid') customerId: string){
-		return this.customersService.delete(parseInt(customerId));
+	deleteCustomer(@LoggedInUser() loggedInUser: User, @Param('customerid') customerId: string){
+		const args = {loggedInUser, customerId: parseInt(customerId)};
+		return this.customersService.delete(args);
 	}
 
 }

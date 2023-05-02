@@ -13,27 +13,30 @@ export class MatchpointsController{
 
 	@Get('/:matchPointId?')
 	@HasPermissions('view_match_points')
-	list(@Param('matchPointId') matchPointId?: number, @Query() qry?: GetMatchpointsDto){
-		const args = {...qry!, match_point_id: matchPointId};
+	list(@LoggedInUser() loggedInUser: User, @Param('matchPointId') matchPointId?: number, @Query() qry?: GetMatchpointsDto){
+		const args = {...qry!, match_point_id: matchPointId, loggedInUser};
 		return this.matchpointsService.find(args);
 	}
 
 	@Post()
 	@HasPermissions('add_check_in')
-	createMatchpoint(@LoggedInUser() user: User, @Body() body: CreateCheckInDto){
-		return this.matchpointsService.checkin(user,body);
+	createMatchpoint(@LoggedInUser() loggedInUser: User, @Body() body: CreateCheckInDto){
+		const args = {body, loggedInUser};
+		return this.matchpointsService.checkin(args);
 	}
 
-	@Patch('/assign/:matchpointid')
+	@Patch('/assign/machine/:matchpointid')
 	@HasPermissions('assign_machine_number')
-	updateMatchpoint(@Param('matchpointid') matchpointId: string, @Body() body: AssignMachineNumber){
-		return this.matchpointsService.assignMachineNumber(parseInt(matchpointId),body);
+	updateMatchpoint(@LoggedInUser() loggedInUser: User, @Param('matchpointid') matchpointId: string, @Body() body: AssignMachineNumber){
+		const args = {body, loggedInUser, matchpointId: parseInt(matchpointId)};
+		return this.matchpointsService.assignMachineNumber(args);
 	}
 
 	@Delete('/:matchpointid')
 	@HasPermissions('delete_matchpoints')
-	deleteMatchpoint(@Param('matchpointid') matchpointId: string){
-		return this.matchpointsService.delete(parseInt(matchpointId));
+	deleteMatchpoint(@LoggedInUser() loggedInUser: User, @Param('matchpointid') matchpointId: string){
+		const args = {loggedInUser, matchpointId: parseInt(matchpointId)};
+		return this.matchpointsService.delete(args);
 	}
 
 }
