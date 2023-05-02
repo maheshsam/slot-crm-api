@@ -6,6 +6,7 @@ import { PermissionsModule } from './permissions/permissions.module';
 import { LocationsModule } from './locations/locations.module';
 import { MasterDataModule } from './masterdata/masterdata.module';
 import { CustomersModule } from './customers/customers.module';
+import { MatchpointsModule } from "./matchpoint/matchpoints.module";
 
 @Module({
 	imports: [
@@ -16,6 +17,7 @@ import { CustomersModule } from './customers/customers.module';
 	    MasterDataModule,
 	    LocationsModule,
 	    CustomersModule,
+		MatchpointsModule,
 	],
 })
 export class IndexModule {}

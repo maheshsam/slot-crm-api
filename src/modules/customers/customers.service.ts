@@ -20,12 +20,18 @@ export class CustomersService{
 		const isSuperRole = hasSuperRole(loggedInUser);
 		const page = args.page || 1;
 		const limit = args.items_per_page || 100000;
-		console.log("args.status",args.status, typeof args.status)
 		if(args.customer_id && args.customer_id != undefined){
 			if(isSuperRole){
 				return this.repo.findOne({where: {id: args.customer_id}, relations: { added_by: true }});
 			}else{
 				return this.repo.findOne({where: {id: args.customer_id, location: loggedInUser.userLocation}, relations: { added_by: true }});
+			}
+		}
+		if(args.phone && args.phone != undefined){
+			if(isSuperRole){
+				return this.repo.findOne({where: {phone: Number(args.phone)}});
+			}else{
+				return this.repo.findOne({where: {phone: args.phone, location: loggedInUser.userLocation}});
 			}
 		}
 		try{
@@ -72,7 +78,7 @@ export class CustomersService{
 		if(loggedInUser.userLocation == null){
 			throw new ConflictException('Invalid location');	
 		}
-		const customerNameExists = await this.repo.findOne({where:{phone: customerDto.phone.toString()}});
+		const customerNameExists = await this.repo.findOne({where:{phone: Number(customerDto.phone)}});
 	    if (customerNameExists) {
 	      throw new ConflictException('Customer with given phone already exists');
 	    }

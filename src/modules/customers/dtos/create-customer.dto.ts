@@ -16,7 +16,7 @@ export class CreateCustomerDto {
 	
 	@ApiProperty()
 	@IsNumber()
-	phone: string
+	phone: number
 
 	@IsNumber()
 	@IsOptional()

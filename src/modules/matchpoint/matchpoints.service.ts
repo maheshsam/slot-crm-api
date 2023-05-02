@@ -23,12 +23,15 @@ export class MatchpointsService{
 		const limit = args.items_per_page || 100000;
 
 		if(args.matchpoint_id && args.matchpoint_id != undefined){
-			return this.repo.find({where: {id: args.matchpoint_id}, relations: { added_by: true }});
+			return this.repo.find({where: {id: args.matchpoint_id}, relations: { customer: true, location: true, added_by: true }});
 		}
 		try{
 			if(Object.keys(args).length > 0){
 
 				const matchpointsQuery = this.repo.createQueryBuilder("matchpoint");
+				matchpointsQuery.leftJoinAndSelect("matchpoint.added_by", "user");
+				matchpointsQuery.leftJoinAndSelect("matchpoint.customer", "customer");
+				matchpointsQuery.leftJoinAndSelect("matchpoint.location", "location");
 				if(args.qry && args.qry != ""){
 					matchpointsQuery.where("LOWER(matchpoint.first_name) LIKE LOWER(:qry) OR LOWER(matchpoint.last_name) LIKE LOWER(:qry) OR matchpoint.phone LIKE LOWER(:qry) OR matchpoint.dob LIKE LOWER(:qry) OR matchpoint.driving_license LIKE LOWER(:qry) OR LOWER(matchpoint.city) LIKE LOWER(:qry) OR LOWER(matchpoint.state) LIKE LOWER(:qry) OR LOWER(matchpoint.country) LIKE LOWER(:qry) OR LOWER(matchpoint.comments) LIKE LOWER(:qry)", { qry: `%${args.qry}%` });
 				}

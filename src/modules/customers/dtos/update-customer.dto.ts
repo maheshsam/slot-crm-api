@@ -16,7 +16,7 @@ export class UpdateCustomerDto {
 	
 	@ApiProperty()
 	@IsNumber()
-	phone: string
+	phone: number
 
 	@ApiProperty()
 	@IsOptional()

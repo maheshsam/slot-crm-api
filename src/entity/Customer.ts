@@ -19,7 +19,7 @@ export class Customer {
     photo: string
 
     @Column({type: 'bigint'})
-    phone: string
+    phone: number
 
     @Column({ nullable: true})
     phone_otp: number
