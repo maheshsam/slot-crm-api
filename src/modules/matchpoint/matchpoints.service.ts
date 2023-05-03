@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Not, Equal } from 'typeorm';
 import { CreateCheckInDto } from './dtos/create-checkin.dto';
 import { GetMatchpointsDto } from './dtos/get-matchpoints.dto';
-import { AssignMachineNumber } from './dtos/assign-machine-number.dto';
+import { FinalisedMatchPoint } from './dtos/finalised-match-point';
 import { MatchPoint } from '../../entity/MatchPoint';
 import { User } from '../../entity/User';
 import { Customer } from '../../entity/Customer';
@@ -95,25 +95,26 @@ export class MatchpointsService{
 		}
 	}
 
-	async assignMachineNumber(args: any) {
+	async finalisedMatchPoint(args: any) {
 		const loggedInUser = args.loggedInUser;
 		const matchpointId: number = args.matchpointId;
-		const body: AssignMachineNumber = args.body;
-		const customerExists = await this.repoCustomer.findOne({where:{id: body.customer_id, location: loggedInUser.userLocation}});
-		if (!customerExists) {
-			throw new NotFoundException('Invalid customer');
-		}
-		const matchpoint = await this.repo.findOne({ where: {id: matchpointId, location: loggedInUser.userLocation}});
+		const body: FinalisedMatchPoint = args.body;
+		// const customerExists = await this.repoCustomer.findOne({where:{id: body.customer_id, location: loggedInUser.userLocation}});
+		// if (!customerExists) {
+		// 	throw new NotFoundException('Invalid customer');
+		// }
+		const matchpoint = await this.repo.findOne({ where: {id: body.id, location: loggedInUser.userLocation}});
 		if(!matchpoint){
 			throw new NotFoundException('Invalid location');
 		}
 		matchpoint.machine_number = body.machine_number;
 		matchpoint.machine_assign_datetime = String(Date.now());
-		
+		matchpoint.status = true;
 		await this.repo.save(matchpoint);
 		if(loggedInUser){
 			matchpoint.persistable.updated_by = loggedInUser;
 		}
+		console.log(matchpoint);
 		return this.repo.save(matchpoint);
 	}
 

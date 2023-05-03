@@ -3,7 +3,7 @@ import { MatchpointsService } from './matchpoints.service';
 import { LoggedInUser, Auth } from '../../common/decorators/index';
 import { CreateCheckInDto } from './dtos/create-checkin.dto';
 import { GetMatchpointsDto } from './dtos/get-matchpoints.dto';
-import { AssignMachineNumber } from './dtos/assign-machine-number.dto';
+import { FinalisedMatchPoint } from './dtos/finalised-match-point';
 import { HasPermissions } from '../../common/decorators/has-permissions.decorator';
 import { User } from '../../entity/User';
 
@@ -27,9 +27,9 @@ export class MatchpointsController{
 
 	@Patch('/finalised/:matchpointid')
 	@HasPermissions('finalised_matchpoint')
-	updateMatchpoint(@LoggedInUser() loggedInUser: User, @Param('matchpointid') matchpointId: string, @Body() body: AssignMachineNumber){
+	updateMatchpoint(@LoggedInUser() loggedInUser: User, @Param('matchpointid') matchpointId: string, @Body() body: FinalisedMatchPoint){
 		const args = {body, loggedInUser, matchpointId: parseInt(matchpointId)};
-		return this.matchpointsService.assignMachineNumber(args);
+		return this.matchpointsService.finalisedMatchPoint(args);
 	}
 
 	@Delete('/:matchpointid')
