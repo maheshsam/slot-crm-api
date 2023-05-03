@@ -32,12 +32,11 @@ export class MatchpointsService{
 				matchpointsQuery.leftJoinAndSelect("matchpoint.added_by", "user");
 				matchpointsQuery.leftJoinAndSelect("matchpoint.customer", "customer");
 				matchpointsQuery.leftJoinAndSelect("matchpoint.location", "location");
-				if(args.qry && args.qry != ""){
-					matchpointsQuery.where("LOWER(matchpoint.first_name) LIKE LOWER(:qry) OR LOWER(matchpoint.last_name) LIKE LOWER(:qry) OR matchpoint.phone LIKE LOWER(:qry) OR matchpoint.dob LIKE LOWER(:qry) OR matchpoint.driving_license LIKE LOWER(:qry) OR LOWER(matchpoint.city) LIKE LOWER(:qry) OR LOWER(matchpoint.state) LIKE LOWER(:qry) OR LOWER(matchpoint.country) LIKE LOWER(:qry) OR LOWER(matchpoint.comments) LIKE LOWER(:qry)", { qry: `%${args.qry}%` });
-				}
-				
+				if(args.search && args.search != ""){
+					matchpointsQuery.andWhere("LOWER(customer.first_name) LIKE LOWER(:qry) OR LOWER(customer.last_name) LIKE LOWER(:qry) OR customer.phone LIKE LOWER(:qry) OR customer.dob LIKE LOWER(:qry) OR customer.driving_license LIKE LOWER(:qry) OR LOWER(customer.city) LIKE LOWER(:qry) OR LOWER(customer.state) LIKE LOWER(:qry) OR LOWER(customer.country) LIKE LOWER(:qry) OR LOWER(customer.comments) LIKE LOWER(:qry) OR matchpoint.machine_number = :qry1", { qry: `%${args.search}%`, qry1: args.search });
+				}				
 				if(args.status != undefined){
-					matchpointsQuery.where("matchpoint.status = :status",{ status: Number(args.status) == 1 ? true : false});
+					matchpointsQuery.andWhere("matchpoint.status = :status",{ status: Number(args.status) == 1 ? true : false});
 				}
 				if(args.created_daterange && args.created_daterange != ""){
 					const genders = args.created_daterange.split("/");
@@ -114,7 +113,6 @@ export class MatchpointsService{
 		if(loggedInUser){
 			matchpoint.persistable.updated_by = loggedInUser;
 		}
-		console.log(matchpoint);
 		return this.repo.save(matchpoint);
 	}
 

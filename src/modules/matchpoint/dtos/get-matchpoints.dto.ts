@@ -12,7 +12,7 @@ export class GetMatchpointsDto{
 
 	@ApiProperty()
 	@IsOptional()
-	qry!: string
+	search!: string
 
 	@ApiProperty()
 	@IsOptional()
@@ -34,7 +34,6 @@ export class GetMatchpointsDto{
 	@IsOptional()
 	status: string
 
-	
 	@ApiProperty()
 	@IsOptional()
 	page!: number
