@@ -4,45 +4,41 @@ import { Location } from "./Location";
 import { Customer } from "./Customer";
 import { Persistable } from "./Persistable";
 
+export enum MoneyInType {
+    BANK = "BANK",
+    PULL = "PULL",
+}
+
+
 @Entity()
-export class MatchPoint {
+export class MoneyIn {
 
     @PrimaryGeneratedColumn()
     id: number
 
+    @Column({
+        type: "enum",
+        enum: MoneyInType,
+        default: MoneyInType.BANK,
+    })
+    money_in_type: MoneyInType
+
+    @Column({ type: 'numeric', precision: 10, scale: 2, default: 0 })
+    amount: number;
+
     @Column({nullable: true, type: 'text'})
-    check_in_photo: string
+    comments: string
 
     @Column({nullable: true, type: 'datetime'})
-    check_in_datetime: string
-
-    @Column({nullable: true})
-    match_point: number
-
-    @Column({nullable: true})
-    machine_number: number
-
-    @Column({nullable: true, type: 'datetime'})
-    machine_assign_datetime: string
-
-    @ManyToOne((type) => Customer)
-    @JoinColumn()
-    customer: Customer
+    added_datetime: string
 
     @ManyToOne((type) => User)
     @JoinColumn()
     added_by: User
 
-    @ManyToOne((type) => User)
-    @JoinColumn()
-    current_user: User
-
     @ManyToOne((type) => Location)
     @JoinColumn()
     location: Location
-
-    @Column({ default: false })
-    status: boolean
 
     @Column(() => Persistable, { prefix: false })
     persistable: Persistable;

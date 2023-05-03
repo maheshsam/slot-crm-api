@@ -7,6 +7,10 @@ import { LocationsModule } from './locations/locations.module';
 import { MasterDataModule } from './masterdata/masterdata.module';
 import { CustomersModule } from './customers/customers.module';
 import { MatchpointsModule } from "./matchpoint/matchpoints.module";
+import { TickeoutsModule } from "./ticketout/ticketouts.module";
+import { PromotionsModule } from "./promotions/promotions.module";
+import { MoneyInModule } from "./moneyin/moneyin.module";
+import { MoneyOutModule } from "./moneyout/moneyout.module";
 
 @Module({
 	imports: [
@@ -18,6 +22,10 @@ import { MatchpointsModule } from "./matchpoint/matchpoints.module";
 	    LocationsModule,
 	    CustomersModule,
 		MatchpointsModule,
+		TickeoutsModule,
+		PromotionsModule,
+		MoneyInModule,
+		MoneyOutModule,
 	],
 })
 export class IndexModule {}
