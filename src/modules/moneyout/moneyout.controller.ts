@@ -36,7 +36,7 @@ export class MoneyOutController{
 	}
 
 	@Post('/bonus')
-	@HasPermissions('add_pull')
+	@HasPermissions('add_bonus')
 	createBonus(@LoggedInUser() loggedInUser: User, @Body() body: CreateBonusDto){
 		body['money_out_type'] = MoneyOutType.BONUS;
 		const args = {body, loggedInUser};

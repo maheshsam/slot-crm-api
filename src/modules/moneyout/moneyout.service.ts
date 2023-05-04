@@ -24,12 +24,12 @@ export class MoneyOutService{
 		const limit = args.items_per_page || 100000;
 		if(args.id && args.id != undefined){
 			if(isSuperRole){
-				return this.repo.findOne({where: {id: args.id, money_out_type: args.money_out_type == "EXPENSES" ? MoneyOutType.EXPENSES : MoneyOutType.BONUS}, relations: { added_by: true }});
+				return this.repo.findOne({where: {id: args.id, money_out_type: args.money_out_type == "EXPENSES" ? MoneyOutType.EXPENSES : MoneyOutType.BONUS}, relations: { added_by: true, customer: args.money_out_type == "BONUS" }});
 			}else{
-				if(hasPermission(loggedInUser, 'view_all_money_in')){
-					return this.repo.findOne({where: {id: args.id, money_out_type: args.money_out_type == "EXPENSES" ? MoneyOutType.EXPENSES : MoneyOutType.BONUS, location: loggedInUser.userLocation}, relations: { added_by: true }});
+				if(hasPermission(loggedInUser, 'view_all_money_out')){
+					return this.repo.findOne({where: {id: args.id, money_out_type: args.money_out_type == "EXPENSES" ? MoneyOutType.EXPENSES : MoneyOutType.BONUS, location: loggedInUser.userLocation}, relations: { added_by: true, customer: args.money_out_type == "BONUS" }});
 				}else{
-					return this.repo.findOne({where: {id: args.id, money_out_type: args.money_out_type == "EXPENSES" ? MoneyOutType.EXPENSES : MoneyOutType.BONUS, added_by: loggedInUser, location: loggedInUser.userLocation}, relations: { added_by: true }});
+					return this.repo.findOne({where: {id: args.id, money_out_type: args.money_out_type == "EXPENSES" ? MoneyOutType.EXPENSES : MoneyOutType.BONUS, added_by: loggedInUser, location: loggedInUser.userLocation}, relations: { added_by: true, customer: args.money_out_type == "BONUS" }});
 				}
 			}
 		}
@@ -37,11 +37,21 @@ export class MoneyOutService{
 			if(Object.keys(args).length > 0){
 				const resQuery = this.repo.createQueryBuilder("money_out");
 				resQuery.leftJoinAndSelect("money_out.added_by", "user");
+				if(args.money_out_type == "BONUS"){
+					resQuery.leftJoinAndSelect("money_out.customer", "customer");
+					resQuery.andWhere("money_out.money_out_type = :type",{type: MoneyOutType.BONUS});
+				}else{
+					resQuery.andWhere("money_out.money_out_type = :type",{type: MoneyOutType.EXPENSES});
+				}
 				if(!isSuperRole){
-					resQuery.andWhere("money_out.locationId IS NOT NULL AND money_out.locationId = :locationId",{locationId: loggedInUser.userLocation ? loggedInUser.userLocation.id : 0});
+					if(hasPermission(loggedInUser, 'view_all_money_out')){
+						resQuery.andWhere("money_out.locationId IS NOT NULL AND money_out.locationId = :locationId",{locationId: loggedInUser.userLocation ? loggedInUser.userLocation.id : 0});
+					}else{
+						resQuery.andWhere("money_out.locationId IS NOT NULL AND money_out.locationId = :locationId AND money_out.addedById = :addedById",{locationId: loggedInUser.userLocation ? loggedInUser.userLocation.id : 0, addedById: loggedInUser.id});
+					}
 				}
 				if(args.search && args.search != ""){
-					resQuery.andWhere("LOWER(user.full_name) LIKE LOWER(:qry) OR LOWER(user.email) LIKE LOWER(:qry) OR user.phone LIKE LOWER(:qry) OR LOWER(money_out.comments) LIKE LOWER(:qry) OR money_out.amount = :amount", { qry: `%${args.search}%`, amount: args.search });
+					resQuery.andWhere("LOWER(user.full_name) LIKE LOWER(:qry) OR LOWER(user.email) LIKE LOWER(:qry) OR user.mobile LIKE LOWER(:qry) OR LOWER(money_out.comments) LIKE LOWER(:qry) OR LOWER(money_out.sub_type) LIKE LOWER(:qry) OR money_out.amount = :amount", { qry: `%${args.search}%`, amount: args.search });
 				}
 				if(args.created_daterange && args.created_daterange != ""){
 					const genders = args.created_daterange.split("/");
@@ -55,9 +65,13 @@ export class MoneyOutService{
 			console.log(e);
 		}
 		if(isSuperRole){
-			return createPaginationObject<MoneyOut>(await this.repo.find({where: {money_out_type: args.money_out_type == "EXPENSES" ? MoneyOutType.EXPENSES : MoneyOutType.BONUS}, relations: { added_by: true }}), await this.repo.count(), page, limit);
+			return createPaginationObject<MoneyOut>(await this.repo.find({where: {money_out_type: args.money_out_type == "EXPENSES" ? MoneyOutType.EXPENSES : MoneyOutType.BONUS}, relations: { added_by: true, customer: args.money_out_type == "BONUS" }}), await this.repo.count(), page, limit);
 		}else{
-			return createPaginationObject<MoneyOut>(await this.repo.find({where: {money_out_type: args.money_out_type == "EXPENSES" ? MoneyOutType.EXPENSES : MoneyOutType.BONUS, location: loggedInUser.userLocation}, relations: { added_by: true }}), await this.repo.count(), page, limit);
+			if(hasPermission(loggedInUser, 'view_all_money_out')){
+				return createPaginationObject<MoneyOut>(await this.repo.find({where: {money_out_type: args.money_out_type == "EXPENSES" ? MoneyOutType.EXPENSES : MoneyOutType.BONUS, location: loggedInUser.userLocation}, relations: { added_by: true, customer: args.money_out_type == "BONUS" }}), await this.repo.count(), page, limit);
+			}else{
+				return createPaginationObject<MoneyOut>(await this.repo.find({where: {added_by: loggedInUser, money_out_type: args.money_out_type == "EXPENSES" ? MoneyOutType.EXPENSES : MoneyOutType.BONUS, location: loggedInUser.userLocation}, relations: { added_by: true, customer: args.money_out_type == "BONUS" }}), await this.repo.count(), page, limit);
+			}
 		}
 	}
 
@@ -69,13 +83,30 @@ export class MoneyOutService{
 			throw new ConflictException('Invalid location');	
 		}
 
+		let customer = null;
+		if(args.body.money_out_type == MoneyOutType.BONUS){
+			if(isSuperRole){
+				customer = await this.repoCustomer.findOne({where:{id: Number(args.body.customer_id)}});
+				if (!customer) {
+					throw new ConflictException('Customer does not exists');
+				}
+			}else{
+				customer = await this.repoCustomer.findOne({where:{id: Number(args.body.customer_id), location: loggedInUser.userLocation}});
+				if (!customer) {
+					throw new ConflictException('Customer does not exists');
+				}
+			}
+		}
+
 	    if(loggedInUser && loggedInUser.id){
 			const moneyOut = this.repo.create(recordDto);
 			await this.repo.save(moneyOut);
 			if(args.loggedInUser){
 				moneyOut.persistable.created_by = args.loggedInUser;
 			}
-			
+			if(args.body.money_out_type == MoneyOutType.BONUS && customer){
+				moneyOut.customer = customer;
+			}
 	    	moneyOut.added_by = loggedInUser;
 			moneyOut.location = loggedInUser.userLocation;
 			return this.repo.save(moneyOut);

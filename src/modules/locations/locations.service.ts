@@ -4,7 +4,7 @@ import { Repository, Not, Equal } from 'typeorm';
 import { CreateLocationDto } from './dtos/create-location.dto';
 import { UpdateLocationDto } from './dtos/update-location.dto';
 import {GetLocationsDto} from './dtos/get-locations.dto';
-import { Location } from '../../entity/Location';
+import { Location, defaultExpenseTypes, defaultStartingMatchPoints } from '../../entity/Location';
 import { User } from '../../entity/User';
 import { createPaginationObject, Pagination } from "../../lib/pagination";
 
@@ -91,7 +91,9 @@ export class LocationsService{
 		if(loggedInUser){
 			location.persistable.created_by = args.loggedInUser;
 		}
-		await this.repoUser.save(location);
+		location.expense_types = JSON.stringify(defaultExpenseTypes);
+		location.starting_match_points = defaultStartingMatchPoints;
+		await this.repo.save(location);
 		owner.userLocation = location;
 		await this.repoUser.save(owner);
 		return location;
@@ -137,7 +139,7 @@ export class LocationsService{
 		if(loggedInUser){
 			location.persistable.updated_by = args.loggedInUser;
 		}
-		await this.repoUser.save(location);
+		await this.repo.save(location);
 		owner.userLocation = location;
 		await this.repoUser.save(owner);
 		return location;

@@ -9,6 +9,6 @@ export class UpdateMoneyDto {
 	@ApiProperty()
 	@IsOptional()
 	@IsString()
-	comment: string
+	comments: string
 
 }

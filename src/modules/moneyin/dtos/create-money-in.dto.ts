@@ -9,7 +9,7 @@ export class CreateMoneyInDto {
 	@ApiProperty()
 	@IsOptional()
 	@IsString()
-	comment: string
+	comments: string
 
 	@IsOptional()
 	added_by:any

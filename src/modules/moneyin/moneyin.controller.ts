@@ -34,7 +34,7 @@ export class MoneyInController{
 		return this.moneyInService.create(args);
 	}
 
-	@Post('/bank')
+	@Post('/pull')
 	@HasPermissions('add_pull')
 	createPull(@LoggedInUser() loggedInUser: User, @Body() body: CreateMoneyInDto){
 		body['money_in_type'] = MoneyInType.PULL;

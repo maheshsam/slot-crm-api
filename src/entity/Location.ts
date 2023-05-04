@@ -2,6 +2,24 @@ import { Entity, PrimaryGeneratedColumn, Column, JoinColumn, OneToOne, ManyToOne
 import { User } from "./User";
 import { Persistable } from "./Persistable";
 
+export const defaultExpenseTypes = [
+    {
+        key: "food",
+        label: "Food"
+    },
+    {
+        key: "pay_security",
+        label: "Pay Security"
+    },
+    {
+        key: "other",
+        label: "Other"
+    },
+
+];
+
+export const defaultStartingMatchPoints = '10,20,30,40,50';
+
 @Entity()
 export class Location {
 
@@ -19,6 +37,12 @@ export class Location {
 
     @Column({nullable: true, type: 'text'})
     comments: string
+
+    @Column({nullable: true, type: 'text'})
+    expense_types: string
+
+    @Column({nullable: true})
+    starting_match_points: string
 
     @Column({nullable: true})
     address_line_1: string

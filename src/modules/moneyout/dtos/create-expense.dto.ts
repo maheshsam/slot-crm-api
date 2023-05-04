@@ -2,6 +2,11 @@ import { IsString, IsOptional, IsBoolean, IsNumber } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateExpenseDto {
+
+	@ApiProperty()
+	@IsString()
+	sub_type: string
+
 	@ApiProperty()
 	@IsNumber()
 	amount: number
@@ -9,7 +14,7 @@ export class CreateExpenseDto {
 	@ApiProperty()
 	@IsOptional()
 	@IsString()
-	comment: string
+	comments: string
 
 	@IsOptional()
 	added_by:any

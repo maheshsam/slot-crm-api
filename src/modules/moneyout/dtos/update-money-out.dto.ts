@@ -9,6 +9,15 @@ export class UpdateMoneyDto {
 	@ApiProperty()
 	@IsOptional()
 	@IsString()
-	comment: string
+	comments: string
+
+	@ApiProperty()
+	@IsOptional()
+	sub_type?: string
+	
+	@ApiProperty()
+	@IsOptional()
+	@IsNumber()
+	machine_number?: number
 
 }

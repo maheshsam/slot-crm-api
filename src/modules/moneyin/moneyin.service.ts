@@ -36,11 +36,20 @@ export class MoneyInService{
 			if(Object.keys(args).length > 0){
 				const resQuery = this.repo.createQueryBuilder("money_in");
 				resQuery.leftJoinAndSelect("money_in.added_by", "user");
+				if(args.money_in_type == "BANK"){
+					resQuery.andWhere("money_in.money_in_type = :type",{type: MoneyInType.BANK});
+				}else{
+					resQuery.andWhere("money_in.money_in_type = :type",{type: MoneyInType.PULL});
+				}
 				if(!isSuperRole){
-					resQuery.andWhere("money_in.locationId IS NOT NULL AND money_in.locationId = :locationId",{locationId: loggedInUser.userLocation ? loggedInUser.userLocation.id : 0});
+					if(hasPermission(loggedInUser, 'view_all_money_out')){
+						resQuery.andWhere("money_in.locationId IS NOT NULL AND money_in.locationId = :locationId",{locationId: loggedInUser.userLocation ? loggedInUser.userLocation.id : 0});
+					}else{
+						resQuery.andWhere("money_in.locationId IS NOT NULL AND money_in.locationId = :locationId AND money_in.addedById = :addedById",{locationId: loggedInUser.userLocation ? loggedInUser.userLocation.id : 0, addedById: loggedInUser.id});
+					}
 				}
 				if(args.search && args.search != ""){
-					resQuery.andWhere("LOWER(user.full_name) LIKE LOWER(:qry) OR LOWER(user.email) LIKE LOWER(:qry) OR user.phone LIKE LOWER(:qry) OR LOWER(money_in.comments) LIKE LOWER(:qry) OR money_in.amount = :amount", { qry: `%${args.search}%`, amount: args.search });
+					resQuery.andWhere("LOWER(user.full_name) LIKE LOWER(:qry) OR LOWER(user.email) LIKE LOWER(:qry) OR user.mobile LIKE LOWER(:qry) OR LOWER(money_in.comments) LIKE LOWER(:qry) OR money_in.amount = :amount", { qry: `%${args.search}%`, amount: args.search });
 				}
 				if(args.created_daterange && args.created_daterange != ""){
 					const genders = args.created_daterange.split("/");
@@ -54,9 +63,9 @@ export class MoneyInService{
 			console.log(e);
 		}
 		if(isSuperRole){
-			return createPaginationObject<MoneyIn>(await this.repo.find({relations: { added_by: true }}), await this.repo.count(), page, limit);
+			return createPaginationObject<MoneyIn>(await this.repo.find({where:{ money_in_type: args.money_in_type == "BANK" ? MoneyInType.BANK : MoneyInType.PULL },relations: { added_by: true }}), await this.repo.count(), page, limit);
 		}else{
-			return createPaginationObject<MoneyIn>(await this.repo.find({where: {location: loggedInUser.userLocation}, relations: { added_by: true }}), await this.repo.count(), page, limit);
+			return createPaginationObject<MoneyIn>(await this.repo.find({where: {money_in_type: args.money_in_type == "BANK" ? MoneyInType.BANK : MoneyInType.PULL, location: loggedInUser.userLocation}, relations: { added_by: true }}), await this.repo.count(), page, limit);
 		}
 	}
 
