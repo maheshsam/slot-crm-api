@@ -5,7 +5,7 @@ import { CreatePromotionDto } from './dtos/create-promotion.dto';
 import { UpdatePromotionDto } from './dtos/update-promotion.dto';
 import { GetPromotionsDto } from './dtos/get-promotions.dto';
 import { Customer } from '../../entity/Customer';
-import { Promotion } from 'src/entity/Promotion';
+import { Promotion, PromotionType } from 'src/entity/Promotion';
 import { hasSuperRole } from 'src/lib/misc';
 import { createPaginationObject } from 'src/lib/pagination';
 
@@ -23,9 +23,9 @@ export class PromotionsService{
 		const limit = args.items_per_page || 100000;
 		if(args.id && args.id != undefined){
 			if(isSuperRole){
-				return this.repo.findOne({where: {id: args.id}, relations: { customer: true, added_by: true }});
+				return this.repo.findOne({where: {id: args.id, promotion_type: args.promotion_type}, relations: { customer: true, added_by: true }});
 			}else{
-				return this.repo.findOne({where: {id: args.id, location: loggedInUser.userLocation}, relations: { customer: true, added_by: true }});
+				return this.repo.findOne({where: {id: args.id, promotion_type: args.promotion_type, location: loggedInUser.userLocation}, relations: { customer: true, added_by: true }});
 			}
 		}
 		try{
@@ -33,6 +33,7 @@ export class PromotionsService{
 				const resQuery = this.repo.createQueryBuilder("promotion");
 				resQuery.leftJoinAndSelect("promotion.customer", "customer");
 				resQuery.leftJoinAndSelect("promotion.added_by", "user");
+				resQuery.andWhere("promotion.promotion_type = :phonepromotion_type",{promotion_type: args.promotion_type});
 				if(!isSuperRole){
 					resQuery.andWhere("customer.locationId IS NOT NULL AND customer.locationId = :locationId",{locationId: loggedInUser.userLocation ? loggedInUser.userLocation.id : 0});
 				}
@@ -57,9 +58,9 @@ export class PromotionsService{
 			console.log(e);
 		}
 		if(isSuperRole){
-			return createPaginationObject<Promotion>(await this.repo.find({relations: { customer: true, added_by: true }}), await this.repo.count(), page, limit);
+			return createPaginationObject<Promotion>(await this.repo.find({where: {promotion_type: args.promotion_type}, relations: { customer: true, added_by: true }}), await this.repo.count(), page, limit);
 		}else{
-			return createPaginationObject<Promotion>(await this.repo.find({where: {location: loggedInUser.userLocation}, relations: { customer: true, added_by: true }}), await this.repo.count(), page, limit);
+			return createPaginationObject<Promotion>(await this.repo.find({where: {promotion_type: args.promotion_type, location: loggedInUser.userLocation}, relations: { customer: true, added_by: true }}), await this.repo.count(), page, limit);
 		}
 	}
 

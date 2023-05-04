@@ -10,4 +10,12 @@ export class UpdatePromotionDto {
 	@IsString()
 	promotion_customer_photo: string
 
+	@ApiProperty()
+	@IsOptional()
+	machine_number: string
+
+	@ApiProperty()
+	@IsOptional()
+	comments: string
+
 }

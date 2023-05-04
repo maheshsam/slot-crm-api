@@ -44,6 +44,12 @@ export class Promotion {
     @Column({nullable: true, type: 'text'})
     promotion_customer_photo: string
 
+    @Column({nullable: true})
+    machine_number: string
+
+    @Column({nullable: true, type: 'text'})
+    comments: string
+
     @ManyToOne((type) => User)
     @JoinColumn()
     added_by: User

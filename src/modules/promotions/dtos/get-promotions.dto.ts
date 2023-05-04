@@ -9,6 +9,10 @@ export class GetPromotionsDto{
 
 	@ApiProperty()
 	@IsOptional()
+	promotion_type!: any
+
+	@ApiProperty()
+	@IsOptional()
 	phone!: number
 
 	@ApiProperty()

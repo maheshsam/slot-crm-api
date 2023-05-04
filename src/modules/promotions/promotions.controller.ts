@@ -6,7 +6,7 @@ import { GetPromotionsDto } from "./dtos/get-promotions.dto";
 import { HasPermissions } from '../../common/decorators/has-permissions.decorator';
 import { User } from 'src/entity/User';
 import { PromotionsService } from './promotions.service';
-import { PromotionType } from 'src/entity/Promotion';
+import { PromotionType, PrizeType } from 'src/entity/Promotion';
 
 @Controller('promotions')
 export class PromotionsController{
@@ -30,6 +30,7 @@ export class PromotionsController{
 	@HasPermissions('add_raffle')
 	createRaffle(@LoggedInUser() loggedInUser: User, @Body() body: CreatePromotionDto){
 		body['promotion_type'] = PromotionType.RAFFLE;
+		body['prize_type'] = body.prize_type == "cash" ? PrizeType.CASH : PrizeType.OTHER;
 		const args = {body, loggedInUser};
 		return this.promotionsService.create(args);
 	}
@@ -37,7 +38,8 @@ export class PromotionsController{
 	@Post('/drawings')
 	@HasPermissions('add_drawings')
 	createDrawing(@LoggedInUser() loggedInUser: User, @Body() body: CreatePromotionDto){
-		body['promotion_type'] = PromotionType.DRAWINGS; 
+		body['promotion_type'] = PromotionType.DRAWINGS;
+		body['prize_type'] = body.prize_type == "cash" ? PrizeType.CASH : PrizeType.OTHER;
 		const args = {body, loggedInUser};
 		return this.promotionsService.create(args);
 	}
