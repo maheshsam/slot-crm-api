@@ -14,6 +14,7 @@ export class CustomersController{
 	@Get('/:customerId?')
 	@HasPermissions('view_customers')
 	list(@LoggedInUser() loggedInUser: User, @Param('customerId') customerId?: number, @Query() qry?: GetCustomersDto){
+		console.log("qry",qry);
 		const args = {...qry!, customer_id: customerId, loggedInUser};
 		return this.customersService.find(args);
 	}

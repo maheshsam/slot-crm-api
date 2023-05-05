@@ -58,12 +58,14 @@ export class CustomersService{
 				if(args.status !== undefined && args.status !== ""){
 					customersQuery.andWhere("customer.is_active = :status",{status: String(args.status) == '1' ? true : false});
 				}
-				if(args.isverified !== undefined && args.isverified !== ""){
-					customersQuery.andWhere("customer.is_verified = :is_verified",{is_verified: String(args.isverified) == '1' ? true : false});
+				if(args.isVerified !== undefined && args.isVerified !== ""){
+					customersQuery.andWhere("customer.is_verified = :is_verified",{is_verified: String(args.isVerified) == '1' ? true : false});
 				}
-				if(args.created_daterange && args.created_daterange != ""){
-					const genders = args.created_daterange.split("/");
+				console.log(args.startDate,args.endDate);
+				if(args.startDate && args.startDate !== null && args.endDate && args.endDate !== null){
+					// const genders = args.created_daterange.split("/");
 					// customersQuery.where("user_details.gender IN (:gender)",{ gender: genders});
+					customersQuery.where("customer.created_at BETWEEN :startDate AND :endDate", {startDate: args.startDate, endDate: args.endDate});
 				}
 				const total = await customersQuery.getCount();
 				const results = await customersQuery.skip(page-1).take(limit).getMany();

@@ -21,11 +21,15 @@ export class GetCustomersDto{
 
 	@ApiProperty()
 	@IsOptional()
-	isverified!: string
+	isVerified!: string
 
 	@ApiProperty()
 	@IsOptional()
-	created_daterange!: string
+	startDate!: Date
+
+	@ApiProperty()
+	@IsOptional()
+	endDate!: Date
 
 	@ApiProperty()
 	@IsOptional()

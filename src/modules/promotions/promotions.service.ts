@@ -33,7 +33,7 @@ export class PromotionsService{
 				const resQuery = this.repo.createQueryBuilder("promotion");
 				resQuery.leftJoinAndSelect("promotion.customer", "customer");
 				resQuery.leftJoinAndSelect("promotion.added_by", "user");
-				resQuery.andWhere("promotion.promotion_type = :phonepromotion_type",{promotion_type: args.promotion_type});
+				resQuery.andWhere("promotion.promotion_type = :promotion_type",{promotion_type: args.promotion_type});
 				if(!isSuperRole){
 					if(hasPermission(loggedInUser, 'view_all_money_out')){
 						resQuery.andWhere("promotion.locationId IS NOT NULL AND promotion.locationId = :locationId",{locationId: loggedInUser.userLocation ? loggedInUser.userLocation.id : 0});
