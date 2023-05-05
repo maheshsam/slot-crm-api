@@ -7,7 +7,7 @@ import { FinalisedMatchPoint } from './dtos/finalised-match-point';
 import { MatchPoint } from '../../entity/MatchPoint';
 import { User } from '../../entity/User';
 import { Customer } from '../../entity/Customer';
-import { hasSuperRole } from 'src/lib/misc';
+import { hasSuperRole, hasPermission } from 'src/lib/misc';
 import { createPaginationObject } from 'src/lib/pagination';
 @Injectable()
 export class MatchpointsService{
@@ -23,7 +23,15 @@ export class MatchpointsService{
 		const limit = args.items_per_page || 100000;
 
 		if(args.matchpoint_id && args.matchpoint_id != undefined){
-			return this.repo.find({where: {id: args.matchpoint_id}, relations: { customer: true, location: true, added_by: true }});
+			if(isSuperRole){
+				return this.repo.find({where: {id: args.matchpoint_id}, relations: { customer: true, location: true, added_by: true }});
+			}else{
+				if(hasPermission(loggedInUser,'view_all_money_in')){
+					return this.repo.find({where: {id: args.matchpoint_id, location: loggedInUser.userLocation}, relations: { customer: true, location: true, added_by: true }});
+				}else{
+					return this.repo.find({where: {id: args.matchpoint_id, location: loggedInUser.userLocation, added_by: loggedInUser}, relations: { customer: true, location: true, added_by: true }});
+				}
+			}
 		}
 		try{
 			if(Object.keys(args).length > 0){
@@ -32,6 +40,13 @@ export class MatchpointsService{
 				matchpointsQuery.leftJoinAndSelect("matchpoint.added_by", "user");
 				matchpointsQuery.leftJoinAndSelect("matchpoint.customer", "customer");
 				matchpointsQuery.leftJoinAndSelect("matchpoint.location", "location");
+				if(!isSuperRole){
+					if(hasPermission(loggedInUser,'view_all_money_in')){
+						matchpointsQuery.andWhere("matchpoint.locationId IS NOT NULL AND matchpoint.locationId = :locationId",{locationId: loggedInUser.userLocation ? loggedInUser.userLocation.id : 0});
+					}else{
+						matchpointsQuery.andWhere("matchpoint.locationId IS NOT NULL AND matchpoint.locationId = :locationId AND matchpoint.addedById = :addedById",{locationId: loggedInUser.userLocation ? loggedInUser.userLocation.id : 0, addedById: Number(loggedInUser.id)});
+					}
+				}
 				if(args.search && args.search != ""){
 					matchpointsQuery.andWhere("LOWER(customer.first_name) LIKE LOWER(:qry) OR LOWER(customer.last_name) LIKE LOWER(:qry) OR customer.phone LIKE LOWER(:qry) OR customer.dob LIKE LOWER(:qry) OR customer.driving_license LIKE LOWER(:qry) OR LOWER(customer.city) LIKE LOWER(:qry) OR LOWER(customer.state) LIKE LOWER(:qry) OR LOWER(customer.country) LIKE LOWER(:qry) OR LOWER(customer.comments) LIKE LOWER(:qry) OR matchpoint.machine_number = :qry1", { qry: `%${args.search}%`, qry1: args.search });
 				}				

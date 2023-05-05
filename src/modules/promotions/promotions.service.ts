@@ -6,7 +6,7 @@ import { UpdatePromotionDto } from './dtos/update-promotion.dto';
 import { GetPromotionsDto } from './dtos/get-promotions.dto';
 import { Customer } from '../../entity/Customer';
 import { Promotion, PromotionType } from 'src/entity/Promotion';
-import { hasSuperRole } from 'src/lib/misc';
+import { hasSuperRole, hasPermission } from 'src/lib/misc';
 import { createPaginationObject } from 'src/lib/pagination';
 
 @Injectable()
@@ -35,7 +35,11 @@ export class PromotionsService{
 				resQuery.leftJoinAndSelect("promotion.added_by", "user");
 				resQuery.andWhere("promotion.promotion_type = :phonepromotion_type",{promotion_type: args.promotion_type});
 				if(!isSuperRole){
-					resQuery.andWhere("customer.locationId IS NOT NULL AND customer.locationId = :locationId",{locationId: loggedInUser.userLocation ? loggedInUser.userLocation.id : 0});
+					if(hasPermission(loggedInUser, 'view_all_money_out')){
+						resQuery.andWhere("promotion.locationId IS NOT NULL AND promotion.locationId = :locationId",{locationId: loggedInUser.userLocation ? loggedInUser.userLocation.id : 0});
+					}else{
+						resQuery.andWhere("promotion.locationId IS NOT NULL AND promotion.locationId = :locationId AND promotion.addedById = :addedById",{locationId: loggedInUser.userLocation ? loggedInUser.userLocation.id : 0, addedById: loggedInUser.id});
+					}
 				}
 				if(args.search && args.search != ""){
 					resQuery.andWhere("LOWER(customer.first_name) LIKE LOWER(:qry) OR LOWER(customer.last_name) LIKE LOWER(:qry) OR customer.phone LIKE LOWER(:qry) OR customer.dob LIKE LOWER(:qry) OR customer.driving_license LIKE LOWER(:qry) OR LOWER(customer.city) LIKE LOWER(:qry) OR LOWER(customer.state) LIKE LOWER(:qry) OR LOWER(customer.country) LIKE LOWER(:qry) OR LOWER(customer.comments) LIKE LOWER(:qry) OR LOWER(promotion.prize_details) LIKE LOWER(:qry)", { qry: `%${args.search}%` });

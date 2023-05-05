@@ -11,6 +11,8 @@ import { TickeoutsModule } from "./ticketout/ticketouts.module";
 import { PromotionsModule } from "./promotions/promotions.module";
 import { MoneyInModule } from "./moneyin/moneyin.module";
 import { MoneyOutModule } from "./moneyout/moneyout.module";
+import { MachinesModule } from "./machines/machines.module";
+import { MachineReadingssModule } from "./machinereadings/machinereadings.module";
 
 @Module({
 	imports: [
@@ -26,6 +28,8 @@ import { MoneyOutModule } from "./moneyout/moneyout.module";
 		PromotionsModule,
 		MoneyInModule,
 		MoneyOutModule,
+		MachinesModule,
+		MachineReadingssModule,
 	],
 })
 export class IndexModule {}

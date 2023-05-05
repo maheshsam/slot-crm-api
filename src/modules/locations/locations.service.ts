@@ -7,6 +7,7 @@ import {GetLocationsDto} from './dtos/get-locations.dto';
 import { Location, defaultExpenseTypes, defaultStartingMatchPoints } from '../../entity/Location';
 import { User } from '../../entity/User';
 import { createPaginationObject, Pagination } from "../../lib/pagination";
+import { UpdateLocationSettingsDto } from './dtos/update-location-settings.dto';
 
 @Injectable()
 export class LocationsService{
@@ -144,6 +145,18 @@ export class LocationsService{
 		await this.repoUser.save(owner);
 		return location;
 	}
+
+	async updateSettings(args: any) {
+		const loggedInUser: User = args.loggedInUser;
+		const settingsDto: UpdateLocationSettingsDto = args.body;
+		const location = await this.repo.findOne({where: {id: loggedInUser.userLocation.id}, relations: {owner: true}});
+		if(!location){
+			throw new NotFoundException('Invalid location details');
+		}
+		await this.repo.update(location.id,settingsDto);
+		return location;
+	}
+
 
 	async delete(locationId: number) {
 		const location = await this.repo.findOne({ where: {id: locationId}});

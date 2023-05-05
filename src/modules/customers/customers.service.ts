@@ -6,7 +6,7 @@ import { UpdateCustomerDto } from './dtos/update-customer.dto';
 import { GetCustomersDto } from './dtos/get-customers.dto';
 import { Customer } from '../../entity/Customer';
 import { User } from '../../entity/User';
-import { hasSuperRole } from 'src/lib/misc';
+import { hasSuperRole, hasPermission } from 'src/lib/misc';
 import { createPaginationObject } from 'src/lib/pagination';
 
 @Injectable()
@@ -24,7 +24,11 @@ export class CustomersService{
 			if(isSuperRole){
 				return this.repo.findOne({where: {id: args.customer_id}, relations: { added_by: true }});
 			}else{
-				return this.repo.findOne({where: {id: args.customer_id, location: loggedInUser.userLocation}, relations: { added_by: true }});
+				if(hasPermission(loggedInUser,'view_all_money_in')){
+					return this.repo.findOne({where: {id: args.customer_id, location: loggedInUser.userLocation}, relations: { added_by: true }});
+				}else{
+					return this.repo.findOne({where: {id: args.customer_id, location: loggedInUser.userLocation, added_by: loggedInUser}, relations: { added_by: true }});
+				}
 			}
 		}
 		if(args.phone && args.phone != undefined){
@@ -39,7 +43,11 @@ export class CustomersService{
 				const customersQuery = this.repo.createQueryBuilder("customer");
 				customersQuery.leftJoinAndSelect("customer.added_by", "user");
 				if(!isSuperRole){
-					customersQuery.andWhere("customer.locationId IS NOT NULL AND customer.locationId = :locationId",{locationId: loggedInUser.userLocation ? loggedInUser.userLocation.id : 0});
+					if(hasPermission(loggedInUser,'view_all_money_in')){
+						customersQuery.andWhere("customer.locationId IS NOT NULL AND customer.locationId = :locationId",{locationId: loggedInUser.userLocation ? loggedInUser.userLocation.id : 0});
+					}else{
+						customersQuery.andWhere("customer.locationId IS NOT NULL AND customer.locationId = :locationId AND customer.addedById = :addedById",{locationId: loggedInUser.userLocation ? loggedInUser.userLocation.id : 0, addedById: Number(loggedInUser.id)});
+					}
 				}
 				if(args.search && args.search != ""){
 					customersQuery.andWhere("LOWER(customer.first_name) LIKE LOWER(:qry) OR LOWER(customer.last_name) LIKE LOWER(:qry) OR customer.phone LIKE LOWER(:qry) OR customer.dob LIKE LOWER(:qry) OR customer.driving_license LIKE LOWER(:qry) OR LOWER(customer.city) LIKE LOWER(:qry) OR LOWER(customer.state) LIKE LOWER(:qry) OR LOWER(customer.country) LIKE LOWER(:qry) OR LOWER(customer.comments) LIKE LOWER(:qry)", { qry: `%${args.search}%` });
@@ -67,7 +75,11 @@ export class CustomersService{
 		if(isSuperRole){
 			return createPaginationObject<Customer>(await this.repo.find({relations: { added_by: true }}), await this.repo.count(), page, limit);
 		}else{
-			return createPaginationObject<Customer>(await this.repo.find({where: {location: loggedInUser.userLocation}, relations: { added_by: true }}), await this.repo.count(), page, limit);
+			if(hasPermission(loggedInUser,'view_all_money_in')){
+				return createPaginationObject<Customer>(await this.repo.find({where: {location: loggedInUser.userLocation}, relations: { added_by: true }}), await this.repo.count(), page, limit);
+			}else{
+				return createPaginationObject<Customer>(await this.repo.find({where: {location: loggedInUser.userLocation, added_by: loggedInUser}, relations: { added_by: true }}), await this.repo.count(), page, limit);
+			}
 		}
 	}
 
@@ -103,7 +115,6 @@ export class CustomersService{
 		const loggedInUser = args.loggedInUser;
 		// const isSuperRole = hasSuperRole(loggedInUser);
 		const customerDto: UpdateCustomerDto = args.body;
-		console.log(args);
 		const customerId: number = args.customerId;
 		const customerNameExists = await this.repo.findOne({where:{phone: customerDto.phone, id: Not(Equal(customerId))}});
 	    if (customerNameExists) {

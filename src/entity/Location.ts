@@ -45,6 +45,9 @@ export class Location {
     starting_match_points: string
 
     @Column({nullable: true})
+    match_point_restrictions_hours: string
+
+    @Column({nullable: true})
     address_line_1: string
 
     @Column({nullable: true})

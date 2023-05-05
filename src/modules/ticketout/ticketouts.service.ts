@@ -6,7 +6,7 @@ import { UpdateTicketoutDto } from './dtos/update-ticket-out.dto';
 import { GetTicketoutsDto } from './dtos/get-ticket-outs.dto';
 import { Customer } from '../../entity/Customer';
 import { TicketOut } from 'src/entity/TicketOut';
-import { hasSuperRole } from 'src/lib/misc';
+import { hasSuperRole, hasPermission } from 'src/lib/misc';
 import { createPaginationObject } from 'src/lib/pagination';
 
 @Injectable()
@@ -34,7 +34,11 @@ export class TicketoutsService{
 				resQuery.leftJoinAndSelect("ticket_out.customer", "customer");
 				resQuery.leftJoinAndSelect("ticket_out.added_by", "user");
 				if(!isSuperRole){
-					resQuery.andWhere("customer.locationId IS NOT NULL AND customer.locationId = :locationId",{locationId: loggedInUser.userLocation ? loggedInUser.userLocation.id : 0});
+					if(hasPermission(loggedInUser, 'view_all_money_out')){
+						resQuery.andWhere("ticket_out.locationId IS NOT NULL AND ticket_out.locationId = :locationId",{locationId: loggedInUser.userLocation ? loggedInUser.userLocation.id : 0});
+					}else{
+						resQuery.andWhere("ticket_out.locationId IS NOT NULL AND ticket_out.locationId = :locationId AND ticket_out.addedById = :addedById",{locationId: loggedInUser.userLocation ? loggedInUser.userLocation.id : 0, addedById: loggedInUser.id});
+					}
 				}
 				if(args.search && args.search != ""){
 					resQuery.andWhere("LOWER(customer.first_name) LIKE LOWER(:qry) OR LOWER(customer.last_name) LIKE LOWER(:qry) OR customer.phone LIKE LOWER(:qry) OR customer.dob LIKE LOWER(:qry) OR customer.driving_license LIKE LOWER(:qry) OR LOWER(customer.city) LIKE LOWER(:qry) OR LOWER(customer.state) LIKE LOWER(:qry) OR LOWER(customer.country) LIKE LOWER(:qry) OR LOWER(customer.comments) LIKE LOWER(:qry) OR ticket_out.machine_number = :machine_number", { qry: `%${args.search}%`, machine_number: args.search });

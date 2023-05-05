@@ -6,11 +6,30 @@ import { GetLocationsDto } from './dtos/get-locations.dto';
 import { HasPermissions } from '../../common/decorators/has-permissions.decorator';
 import { LoggedInUser } from '../../common/decorators/index';
 import { User } from '../../entity/User';
+import { UpdateLocationSettingsDto } from './dtos/update-location-settings.dto';
 
 @Controller('locations')
 export class LocationsController{
 	constructor(private locationsService: LocationsService){}
 
+	@Get('/settings')
+	@HasPermissions('manage_location_settings')
+	loggedInUserLocation(@LoggedInUser() loggedInUser: User){
+		const args = {loggedInUser};
+		if(loggedInUser.userLocation){
+			return this.locationsService.findOne(loggedInUser.userLocation.id);
+		}else{
+			return {}
+		}
+	}
+
+	@Patch('/settings')
+	@HasPermissions('manage_location_settings')
+	updateLocationSettings(@LoggedInUser() loggedInUser: User, @Body() body: UpdateLocationSettingsDto){
+		const args = {body, loggedInUser};
+		return this.locationsService.updateSettings(args);
+	}
+	
 	@Get('/:id?')
 	@HasPermissions('view_locations')
 	list(@LoggedInUser() loggedInUser: User, @Param('id') locationId?: number, @Query() qry?: GetLocationsDto){
