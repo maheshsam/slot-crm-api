@@ -17,6 +17,7 @@ import { randomBytes, scrypt as _scrypt } from 'crypto';
 import { promisify } from 'util';
 import { KafkaProducerService } from '../../lib/kafka/producer.service';
 import { hasSuperRole } from '../../lib/misc';
+import * as moment from "moment";
 
 const getmac = require('getmac')
 const scrypt = promisify(_scrypt);
@@ -65,6 +66,11 @@ export class UsersService {
 				if(args.gender && args.gender != ""){
 					const genders = args.gender.split(",");
 					usersQuery.andWhere("user_details.gender IN (:gender)",{ gender: genders});
+				}
+				if(args.start_date && args.start_date !== null && args.end_date && args.end_date !== null){
+					const startDateMoment = moment(args.start_date,'YYYY-MM-DDTHH:mm:ssZ');
+					const endDateMoment = moment(args.end_date,'YYYY-MM-DDTHH:mm:ssZ');
+					usersQuery.where("user.created_at BETWEEN :startDate AND :endDate", {startDate: startDateMoment.startOf('day').toISOString(), endDate: endDateMoment.endOf('day').toISOString()});
 				}
 				if(args.role && args.role != ""){
 					usersQuery.andWhere("role.id IN (:roles)",{ roles: args.role.split(",").map( Number )});

@@ -25,11 +25,11 @@ export class GetCustomersDto{
 
 	@ApiProperty()
 	@IsOptional()
-	startDate!: Date
+	start_date!: string
 
 	@ApiProperty()
 	@IsOptional()
-	endDate!: Date
+	end_date!: string
 
 	@ApiProperty()
 	@IsOptional()

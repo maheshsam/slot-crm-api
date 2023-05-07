@@ -21,7 +21,11 @@ export class GetTicketoutsDto{
 
 	@ApiProperty()
 	@IsOptional()
-	created_daterange!: string
+	start_date!: string
+
+	@ApiProperty()
+	@IsOptional()
+	end_date!: string
 
 	@ApiProperty()
 	@IsOptional()

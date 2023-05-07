@@ -45,4 +45,11 @@ export class GetUsersDto{
 	@IsOptional()
 	loggedInUser: any
 
+	@ApiProperty()
+	@IsOptional()
+	start_date!: string
+
+	@ApiProperty()
+	@IsOptional()
+	end_date!: string
 }

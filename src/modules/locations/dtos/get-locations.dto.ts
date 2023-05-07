@@ -26,5 +26,13 @@ export class GetLocationsDto {
 
 	@ApiProperty()
 	@IsOptional()
+	start_date!: string
+
+	@ApiProperty()
+	@IsOptional()
+	end_date!: string
+
+	@ApiProperty()
+	@IsOptional()
 	items_per_page!: number
 }

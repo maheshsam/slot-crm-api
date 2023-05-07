@@ -5,9 +5,9 @@ import { CreateCustomerDto } from './dtos/create-customer.dto';
 import { UpdateCustomerDto } from './dtos/update-customer.dto';
 import { GetCustomersDto } from './dtos/get-customers.dto';
 import { Customer } from '../../entity/Customer';
-import { User } from '../../entity/User';
 import { hasSuperRole, hasPermission } from 'src/lib/misc';
 import { createPaginationObject } from 'src/lib/pagination';
+import * as moment from "moment";
 
 @Injectable()
 export class CustomersService{
@@ -61,11 +61,10 @@ export class CustomersService{
 				if(args.isVerified !== undefined && args.isVerified !== ""){
 					customersQuery.andWhere("customer.is_verified = :is_verified",{is_verified: String(args.isVerified) == '1' ? true : false});
 				}
-				console.log(args.startDate,args.endDate);
-				if(args.startDate && args.startDate !== null && args.endDate && args.endDate !== null){
-					// const genders = args.created_daterange.split("/");
-					// customersQuery.where("user_details.gender IN (:gender)",{ gender: genders});
-					customersQuery.where("customer.created_at BETWEEN :startDate AND :endDate", {startDate: args.startDate, endDate: args.endDate});
+				if(args.start_date && args.start_date !== null && args.end_date && args.end_date !== null){
+					const startDateMoment = moment(args.start_date,'YYYY-MM-DDTHH:mm:ssZ');
+					const endDateMoment = moment(args.end_date,'YYYY-MM-DDTHH:mm:ssZ');
+					customersQuery.where("customer.created_at BETWEEN :startDate AND :endDate", {startDate: startDateMoment.startOf('day').toISOString(), endDate: endDateMoment.endOf('day').toISOString()});
 				}
 				const total = await customersQuery.getCount();
 				const results = await customersQuery.skip(page-1).take(limit).getMany();

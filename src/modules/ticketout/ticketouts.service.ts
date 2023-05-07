@@ -8,6 +8,7 @@ import { Customer } from '../../entity/Customer';
 import { TicketOut } from 'src/entity/TicketOut';
 import { hasSuperRole, hasPermission } from 'src/lib/misc';
 import { createPaginationObject } from 'src/lib/pagination';
+import * as moment from "moment";
 
 @Injectable()
 export class TicketoutsService{
@@ -30,18 +31,18 @@ export class TicketoutsService{
 		}
 		try{
 			if(Object.keys(args).length > 0){
-				const resQuery = this.repo.createQueryBuilder("ticket_out");
-				resQuery.leftJoinAndSelect("ticket_out.customer", "customer");
-				resQuery.leftJoinAndSelect("ticket_out.added_by", "user");
+				const resultsQuery = this.repo.createQueryBuilder("ticket_out");
+				resultsQuery.leftJoinAndSelect("ticket_out.customer", "customer");
+				resultsQuery.leftJoinAndSelect("ticket_out.added_by", "user");
 				if(!isSuperRole){
 					if(hasPermission(loggedInUser, 'view_all_money_out')){
-						resQuery.andWhere("ticket_out.locationId IS NOT NULL AND ticket_out.locationId = :locationId",{locationId: loggedInUser.userLocation ? loggedInUser.userLocation.id : 0});
+						resultsQuery.andWhere("ticket_out.locationId IS NOT NULL AND ticket_out.locationId = :locationId",{locationId: loggedInUser.userLocation ? loggedInUser.userLocation.id : 0});
 					}else{
-						resQuery.andWhere("ticket_out.locationId IS NOT NULL AND ticket_out.locationId = :locationId AND ticket_out.addedById = :addedById",{locationId: loggedInUser.userLocation ? loggedInUser.userLocation.id : 0, addedById: loggedInUser.id});
+						resultsQuery.andWhere("ticket_out.locationId IS NOT NULL AND ticket_out.locationId = :locationId AND ticket_out.addedById = :addedById",{locationId: loggedInUser.userLocation ? loggedInUser.userLocation.id : 0, addedById: loggedInUser.id});
 					}
 				}
 				if(args.search && args.search != ""){
-					resQuery.andWhere("LOWER(customer.first_name) LIKE LOWER(:qry) OR LOWER(customer.last_name) LIKE LOWER(:qry) OR customer.phone LIKE LOWER(:qry) OR customer.dob LIKE LOWER(:qry) OR customer.driving_license LIKE LOWER(:qry) OR LOWER(customer.city) LIKE LOWER(:qry) OR LOWER(customer.state) LIKE LOWER(:qry) OR LOWER(customer.country) LIKE LOWER(:qry) OR LOWER(customer.comments) LIKE LOWER(:qry) OR ticket_out.machine_number = :machine_number", { qry: `%${args.search}%`, machine_number: args.search });
+					resultsQuery.andWhere("LOWER(customer.first_name) LIKE LOWER(:qry) OR LOWER(customer.last_name) LIKE LOWER(:qry) OR customer.phone LIKE LOWER(:qry) OR customer.dob LIKE LOWER(:qry) OR customer.driving_license LIKE LOWER(:qry) OR LOWER(customer.city) LIKE LOWER(:qry) OR LOWER(customer.state) LIKE LOWER(:qry) OR LOWER(customer.country) LIKE LOWER(:qry) OR LOWER(customer.comments) LIKE LOWER(:qry) OR ticket_out.machine_number = :machine_number", { qry: `%${args.search}%`, machine_number: args.search });
 				}
 				// if(args.phone !== undefined && args.phone !== null){
 				// 	resQuery.andWhere("customer.phone = :phone",{phone: args.phone});
@@ -49,12 +50,13 @@ export class TicketoutsService{
 				// if(args.status !== undefined && args.status !== ""){
 				// 	resQuery.andWhere("customer.is_active = :status",{status: String(args.status) == '1' ? true : false});
 				// }
-				if(args.created_daterange && args.created_daterange != ""){
-					const genders = args.created_daterange.split("/");
-					// customersQuery.where("user_details.gender IN (:gender)",{ gender: genders});
+				if(args.start_date && args.start_date !== null && args.end_date && args.end_date !== null){
+					const startDateMoment = moment(args.start_date,'YYYY-MM-DDTHH:mm:ssZ');
+					const endDateMoment = moment(args.end_date,'YYYY-MM-DDTHH:mm:ssZ');
+					resultsQuery.where("ticket_out.created_at BETWEEN :startDate AND :endDate", {startDate: startDateMoment.startOf('day').toISOString(), endDate: endDateMoment.endOf('day').toISOString()});
 				}
-				const total = await resQuery.getCount();
-				const results = await resQuery.skip(page-1).take(limit).getMany();
+				const total = await resultsQuery.getCount();
+				const results = await resultsQuery.skip(page-1).take(limit).getMany();
 				return createPaginationObject<TicketOut>(results, total, page, limit);
 			}
 		}catch(e){

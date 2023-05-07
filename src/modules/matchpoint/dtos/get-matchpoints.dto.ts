@@ -36,6 +36,22 @@ export class GetMatchpointsDto{
 
 	@ApiProperty()
 	@IsOptional()
+	checkin_start_date!: string
+
+	@ApiProperty()
+	@IsOptional()
+	checkin_end_date!: string
+
+	@ApiProperty()
+	@IsOptional()
+	finalised_start_date!: string
+
+	@ApiProperty()
+	@IsOptional()
+	finalised_end_date!: string
+
+	@ApiProperty()
+	@IsOptional()
 	page!: number
 
 	@ApiProperty()

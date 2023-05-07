@@ -8,6 +8,7 @@ import { Customer } from '../../entity/Customer';
 import { Promotion, PromotionType } from 'src/entity/Promotion';
 import { hasSuperRole, hasPermission } from 'src/lib/misc';
 import { createPaginationObject } from 'src/lib/pagination';
+import * as moment from "moment";
 
 @Injectable()
 export class PromotionsService{
@@ -30,19 +31,19 @@ export class PromotionsService{
 		}
 		try{
 			if(Object.keys(args).length > 0){
-				const resQuery = this.repo.createQueryBuilder("promotion");
-				resQuery.leftJoinAndSelect("promotion.customer", "customer");
-				resQuery.leftJoinAndSelect("promotion.added_by", "user");
-				resQuery.andWhere("promotion.promotion_type = :promotion_type",{promotion_type: args.promotion_type});
+				const resultsQuery = this.repo.createQueryBuilder("promotion");
+				resultsQuery.leftJoinAndSelect("promotion.customer", "customer");
+				resultsQuery.leftJoinAndSelect("promotion.added_by", "user");
+				resultsQuery.andWhere("promotion.promotion_type = :promotion_type",{promotion_type: args.promotion_type});
 				if(!isSuperRole){
 					if(hasPermission(loggedInUser, 'view_all_money_out')){
-						resQuery.andWhere("promotion.locationId IS NOT NULL AND promotion.locationId = :locationId",{locationId: loggedInUser.userLocation ? loggedInUser.userLocation.id : 0});
+						resultsQuery.andWhere("promotion.locationId IS NOT NULL AND promotion.locationId = :locationId",{locationId: loggedInUser.userLocation ? loggedInUser.userLocation.id : 0});
 					}else{
-						resQuery.andWhere("promotion.locationId IS NOT NULL AND promotion.locationId = :locationId AND promotion.addedById = :addedById",{locationId: loggedInUser.userLocation ? loggedInUser.userLocation.id : 0, addedById: loggedInUser.id});
+						resultsQuery.andWhere("promotion.locationId IS NOT NULL AND promotion.locationId = :locationId AND promotion.addedById = :addedById",{locationId: loggedInUser.userLocation ? loggedInUser.userLocation.id : 0, addedById: loggedInUser.id});
 					}
 				}
 				if(args.search && args.search != ""){
-					resQuery.andWhere("LOWER(customer.first_name) LIKE LOWER(:qry) OR LOWER(customer.last_name) LIKE LOWER(:qry) OR customer.phone LIKE LOWER(:qry) OR customer.dob LIKE LOWER(:qry) OR customer.driving_license LIKE LOWER(:qry) OR LOWER(customer.city) LIKE LOWER(:qry) OR LOWER(customer.state) LIKE LOWER(:qry) OR LOWER(customer.country) LIKE LOWER(:qry) OR LOWER(customer.comments) LIKE LOWER(:qry) OR LOWER(promotion.prize_details) LIKE LOWER(:qry)", { qry: `%${args.search}%` });
+					resultsQuery.andWhere("LOWER(customer.first_name) LIKE LOWER(:qry) OR LOWER(customer.last_name) LIKE LOWER(:qry) OR customer.phone LIKE LOWER(:qry) OR customer.dob LIKE LOWER(:qry) OR customer.driving_license LIKE LOWER(:qry) OR LOWER(customer.city) LIKE LOWER(:qry) OR LOWER(customer.state) LIKE LOWER(:qry) OR LOWER(customer.country) LIKE LOWER(:qry) OR LOWER(customer.comments) LIKE LOWER(:qry) OR LOWER(promotion.prize_details) LIKE LOWER(:qry)", { qry: `%${args.search}%` });
 				}
 				// if(args.phone !== undefined && args.phone !== null){
 				// 	resQuery.andWhere("customer.phone = :phone",{phone: args.phone});
@@ -50,12 +51,13 @@ export class PromotionsService{
 				// if(args.status !== undefined && args.status !== ""){
 				// 	resQuery.andWhere("customer.is_active = :status",{status: String(args.status) == '1' ? true : false});
 				// }
-				if(args.created_daterange && args.created_daterange != ""){
-					const genders = args.created_daterange.split("/");
-					// customersQuery.where("user_details.gender IN (:gender)",{ gender: genders});
+				if(args.start_date && args.start_date !== null && args.end_date && args.end_date !== null){
+					const startDateMoment = moment(args.start_date,'YYYY-MM-DDTHH:mm:ssZ');
+					const endDateMoment = moment(args.end_date,'YYYY-MM-DDTHH:mm:ssZ');
+					resultsQuery.where("promotion.created_at BETWEEN :startDate AND :endDate", {startDate: startDateMoment.startOf('day').toISOString(), endDate: endDateMoment.endOf('day').toISOString()});
 				}
-				const total = await resQuery.getCount();
-				const results = await resQuery.skip(page-1).take(limit).getMany();
+				const total = await resultsQuery.getCount();
+				const results = await resultsQuery.skip(page-1).take(limit).getMany();
 				return createPaginationObject<Promotion>(results, total, page, limit);
 			}
 		}catch(e){

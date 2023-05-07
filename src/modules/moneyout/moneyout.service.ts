@@ -9,6 +9,7 @@ import { Customer } from '../../entity/Customer';
 import { MoneyOut, MoneyOutType } from 'src/entity/MoneyOut';
 import { hasSuperRole, hasPermission } from 'src/lib/misc';
 import { createPaginationObject } from 'src/lib/pagination';
+import * as moment from "moment";
 
 @Injectable()
 export class MoneyOutService{
@@ -35,30 +36,31 @@ export class MoneyOutService{
 		}
 		try{
 			if(Object.keys(args).length > 0){
-				const resQuery = this.repo.createQueryBuilder("money_out");
-				resQuery.leftJoinAndSelect("money_out.added_by", "user");
+				const resultsQuery = this.repo.createQueryBuilder("money_out");
+				resultsQuery.leftJoinAndSelect("money_out.added_by", "user");
 				if(args.money_out_type == "BONUS"){
-					resQuery.leftJoinAndSelect("money_out.customer", "customer");
-					resQuery.andWhere("money_out.money_out_type = :type",{type: MoneyOutType.BONUS});
+					resultsQuery.leftJoinAndSelect("money_out.customer", "customer");
+					resultsQuery.andWhere("money_out.money_out_type = :type",{type: MoneyOutType.BONUS});
 				}else{
-					resQuery.andWhere("money_out.money_out_type = :type",{type: MoneyOutType.EXPENSES});
+					resultsQuery.andWhere("money_out.money_out_type = :type",{type: MoneyOutType.EXPENSES});
 				}
 				if(!isSuperRole){
 					if(hasPermission(loggedInUser, 'view_all_money_out')){
-						resQuery.andWhere("money_out.locationId IS NOT NULL AND money_out.locationId = :locationId",{locationId: loggedInUser.userLocation ? loggedInUser.userLocation.id : 0});
+						resultsQuery.andWhere("money_out.locationId IS NOT NULL AND money_out.locationId = :locationId",{locationId: loggedInUser.userLocation ? loggedInUser.userLocation.id : 0});
 					}else{
-						resQuery.andWhere("money_out.locationId IS NOT NULL AND money_out.locationId = :locationId AND money_out.addedById = :addedById",{locationId: loggedInUser.userLocation ? loggedInUser.userLocation.id : 0, addedById: loggedInUser.id});
+						resultsQuery.andWhere("money_out.locationId IS NOT NULL AND money_out.locationId = :locationId AND money_out.addedById = :addedById",{locationId: loggedInUser.userLocation ? loggedInUser.userLocation.id : 0, addedById: loggedInUser.id});
 					}
 				}
 				if(args.search && args.search != ""){
-					resQuery.andWhere("LOWER(user.full_name) LIKE LOWER(:qry) OR LOWER(user.email) LIKE LOWER(:qry) OR user.mobile LIKE LOWER(:qry) OR LOWER(money_out.comments) LIKE LOWER(:qry) OR LOWER(money_out.sub_type) LIKE LOWER(:qry) OR money_out.amount = :amount", { qry: `%${args.search}%`, amount: args.search });
+					resultsQuery.andWhere("LOWER(user.full_name) LIKE LOWER(:qry) OR LOWER(user.email) LIKE LOWER(:qry) OR user.mobile LIKE LOWER(:qry) OR LOWER(money_out.comments) LIKE LOWER(:qry) OR LOWER(money_out.sub_type) LIKE LOWER(:qry) OR money_out.amount = :amount", { qry: `%${args.search}%`, amount: args.search });
 				}
-				if(args.created_daterange && args.created_daterange != ""){
-					const genders = args.created_daterange.split("/");
-					// customersQuery.where("user_details.gender IN (:gender)",{ gender: genders});
+				if(args.start_date && args.start_date !== null && args.end_date && args.end_date !== null){
+					const startDateMoment = moment(args.start_date,'YYYY-MM-DDTHH:mm:ssZ');
+					const endDateMoment = moment(args.end_date,'YYYY-MM-DDTHH:mm:ssZ');
+					resultsQuery.where("money_out.created_at BETWEEN :startDate AND :endDate", {startDate: startDateMoment.startOf('day').toISOString(), endDate: endDateMoment.endOf('day').toISOString()});
 				}
-				const total = await resQuery.getCount();
-				const results = await resQuery.skip(page-1).take(limit).getMany();
+				const total = await resultsQuery.getCount();
+				const results = await resultsQuery.skip(page-1).take(limit).getMany();
 				return createPaginationObject<MoneyOut>(results, total, page, limit);
 			}
 		}catch(e){

@@ -8,6 +8,7 @@ import { Location, defaultExpenseTypes, defaultStartingMatchPoints } from '../..
 import { User } from '../../entity/User';
 import { createPaginationObject, Pagination } from "../../lib/pagination";
 import { UpdateLocationSettingsDto } from './dtos/update-location-settings.dto';
+import * as moment from "moment";
 
 @Injectable()
 export class LocationsService{
@@ -24,13 +25,13 @@ export class LocationsService{
 		}
 		try{
 			if(Object.keys(args).length > 0){
-				const locationsQuery = this.repo.createQueryBuilder("location");
-				locationsQuery.leftJoinAndSelect("location.owner", "user");
+				const resultsQuery = this.repo.createQueryBuilder("location");
+				resultsQuery.leftJoinAndSelect("location.owner", "user");
 				if(args.search && args.search != ""){
-					locationsQuery.where("LOWER(location.location_name) LIKE LOWER(:qry) OR LOWER(location.details) LIKE LOWER(:qry) OR LOWER(location.comments) LIKE LOWER(:qry) OR LOWER(location.address_line_1) LIKE LOWER(:qry) OR LOWER(location.address_line_2) LIKE LOWER(:qry) OR LOWER(location.address_line_3) LIKE LOWER(:qry) OR LOWER(location.city) LIKE LOWER(:qry) OR LOWER(location.state) LIKE LOWER(:qry) OR LOWER(location.country) LIKE LOWER(:qry)", { qry: `%${args.search}%` });
+					resultsQuery.where("LOWER(location.location_name) LIKE LOWER(:qry) OR LOWER(location.details) LIKE LOWER(:qry) OR LOWER(location.comments) LIKE LOWER(:qry) OR LOWER(location.address_line_1) LIKE LOWER(:qry) OR LOWER(location.address_line_2) LIKE LOWER(:qry) OR LOWER(location.address_line_3) LIKE LOWER(:qry) OR LOWER(location.city) LIKE LOWER(:qry) OR LOWER(location.state) LIKE LOWER(:qry) OR LOWER(location.country) LIKE LOWER(:qry)", { qry: `%${args.search}%` });
 				}
 				if(args.status !== undefined && args.status !== ""){
-					locationsQuery.where("location.is_active = :status",{status: String(args.status) == '1' ? true : false});
+					resultsQuery.where("location.is_active = :status",{status: String(args.status) == '1' ? true : false});
 				}
 				if(args.user && args.user !== null){
 					const users = await this.repoUser.find({where: { id: args.user}});
@@ -38,13 +39,18 @@ export class LocationsService{
 						const userIds = users.map((item) => {
 							return item.id;
 						})
-						locationsQuery.where("user.id IN (:users)",{ users: userIds});
+						resultsQuery.where("user.id IN (:users)",{ users: userIds});
 					}else{
-						locationsQuery.where("user.id = :user",{ user: 0});
+						resultsQuery.where("user.id = :user",{ user: 0});
 					}
-				}		
-				const total = await locationsQuery.getCount();
-				const results = await locationsQuery.skip(page-1).take(limit).getMany();
+				}
+				if(args.start_date && args.start_date !== null && args.end_date && args.end_date !== null){
+					const startDateMoment = moment(args.start_date,'YYYY-MM-DDTHH:mm:ssZ');
+					const endDateMoment = moment(args.end_date,'YYYY-MM-DDTHH:mm:ssZ');
+					resultsQuery.where("location.created_at BETWEEN :startDate AND :endDate", {startDate: startDateMoment.startOf('day').toISOString(), endDate: endDateMoment.endOf('day').toISOString()});
+				}
+				const total = await resultsQuery.getCount();
+				const results = await resultsQuery.skip(page-1).take(limit).getMany();
 				return createPaginationObject<Location>(results, total, page, limit);
 			}
 		}catch(e){
