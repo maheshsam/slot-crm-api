@@ -54,11 +54,34 @@ export class MoneyOutService{
 				if(args.search && args.search != ""){
 					resultsQuery.andWhere("LOWER(user.full_name) LIKE LOWER(:qry) OR LOWER(user.email) LIKE LOWER(:qry) OR user.mobile LIKE LOWER(:qry) OR LOWER(money_out.comments) LIKE LOWER(:qry) OR LOWER(money_out.sub_type) LIKE LOWER(:qry) OR money_out.amount = :amount", { qry: `%${args.search}%`, amount: args.search });
 				}
-				if(args.start_date && args.start_date !== null && args.end_date && args.end_date !== null){
-					const startDateMoment = moment(args.start_date,'YYYY-MM-DDTHH:mm:ssZ');
-					const endDateMoment = moment(args.end_date,'YYYY-MM-DDTHH:mm:ssZ');
-					resultsQuery.where("money_out.created_at BETWEEN :startDate AND :endDate", {startDate: startDateMoment.startOf('day').toISOString(), endDate: endDateMoment.endOf('day').toISOString()});
+				const openingStartTime = moment(loggedInUser.userLocation.opening_start_time ? loggedInUser.userLocation.opening_start_time : '10:30', 'HH:mm');
+				let startDate = moment();
+				let endDate = moment();
+				if(moment().isBefore(openingStartTime)){
+					startDate.subtract(1, 'day');
 				}
+				startDate.set({
+					hour:  openingStartTime.get('hour'),
+					minute: openingStartTime.get('minute'),
+					second: openingStartTime.get('second'),
+				});
+				endDate = moment(startDate).add(23,'hours').add(59, 'minutes');
+				if(args.start_date && args.start_date !== null && args.end_date && args.end_date !== null){
+					startDate = moment(args.start_date,'YYYY-MM-DDTHH:mm:ssZ');
+					startDate.set({
+						hour:  openingStartTime.get('hour'),
+						minute: openingStartTime.get('minute'),
+						second: openingStartTime.get('second'),
+					});
+					endDate = moment(args.end_date,'YYYY-MM-DDTHH:mm:ssZ').add(1,'day');
+					endDate.set({
+						hour:  openingStartTime.get('hour'),
+						minute: openingStartTime.get('minute'),
+						second: openingStartTime.get('second'),
+					});
+					endDate.subtract(1,'minute');
+				}
+				resultsQuery.where("money_out.created_at BETWEEN :startDate AND :endDate", {startDate: startDate.startOf('day').toISOString(), endDate: endDate.endOf('day').toISOString()});
 				const total = await resultsQuery.getCount();
 				const results = await resultsQuery.skip(page-1).take(limit).getMany();
 				return createPaginationObject<MoneyOut>(results, total, page, limit);

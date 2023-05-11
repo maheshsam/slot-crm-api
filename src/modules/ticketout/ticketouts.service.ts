@@ -44,17 +44,34 @@ export class TicketoutsService{
 				if(args.search && args.search != ""){
 					resultsQuery.andWhere("LOWER(customer.first_name) LIKE LOWER(:qry) OR LOWER(customer.last_name) LIKE LOWER(:qry) OR customer.phone LIKE LOWER(:qry) OR customer.dob LIKE LOWER(:qry) OR customer.driving_license LIKE LOWER(:qry) OR LOWER(customer.city) LIKE LOWER(:qry) OR LOWER(customer.state) LIKE LOWER(:qry) OR LOWER(customer.country) LIKE LOWER(:qry) OR LOWER(customer.comments) LIKE LOWER(:qry) OR ticket_out.machine_number = :machine_number", { qry: `%${args.search}%`, machine_number: args.search });
 				}
-				// if(args.phone !== undefined && args.phone !== null){
-				// 	resQuery.andWhere("customer.phone = :phone",{phone: args.phone});
-				// }
-				// if(args.status !== undefined && args.status !== ""){
-				// 	resQuery.andWhere("customer.is_active = :status",{status: String(args.status) == '1' ? true : false});
-				// }
-				if(args.start_date && args.start_date !== null && args.end_date && args.end_date !== null){
-					const startDateMoment = moment(args.start_date,'YYYY-MM-DDTHH:mm:ssZ');
-					const endDateMoment = moment(args.end_date,'YYYY-MM-DDTHH:mm:ssZ');
-					resultsQuery.where("ticket_out.created_at BETWEEN :startDate AND :endDate", {startDate: startDateMoment.startOf('day').toISOString(), endDate: endDateMoment.endOf('day').toISOString()});
+				const openingStartTime = moment(loggedInUser.userLocation.opening_start_time ? loggedInUser.userLocation.opening_start_time : '10:30', 'HH:mm');
+				let startDate = moment();
+				let endDate = moment();
+				if(moment().isBefore(openingStartTime)){
+					startDate.subtract(1, 'day');
 				}
+				startDate.set({
+					hour:  openingStartTime.get('hour'),
+					minute: openingStartTime.get('minute'),
+					second: openingStartTime.get('second'),
+				});
+				endDate = moment(startDate).add(23,'hours').add(59, 'minutes');
+				if(args.start_date && args.start_date !== null && args.end_date && args.end_date !== null){
+					startDate = moment(args.start_date,'YYYY-MM-DDTHH:mm:ssZ');
+					startDate.set({
+						hour:  openingStartTime.get('hour'),
+						minute: openingStartTime.get('minute'),
+						second: openingStartTime.get('second'),
+					});
+					endDate = moment(args.end_date,'YYYY-MM-DDTHH:mm:ssZ').add(1,'day');
+					endDate.set({
+						hour:  openingStartTime.get('hour'),
+						minute: openingStartTime.get('minute'),
+						second: openingStartTime.get('second'),
+					});
+					endDate.subtract(1,'minute');
+				}
+				resultsQuery.where("ticket_out.created_at BETWEEN :startDate AND :endDate", {startDate: startDate.startOf('day').toISOString(), endDate: endDate.endOf('day').toISOString()});
 				const total = await resultsQuery.getCount();
 				const results = await resultsQuery.skip(page-1).take(limit).getMany();
 				return createPaginationObject<TicketOut>(results, total, page, limit);

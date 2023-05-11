@@ -64,7 +64,7 @@ export class CustomersService{
 				if(args.start_date && args.start_date !== null && args.end_date && args.end_date !== null){
 					const startDateMoment = moment(args.start_date,'YYYY-MM-DDTHH:mm:ssZ');
 					const endDateMoment = moment(args.end_date,'YYYY-MM-DDTHH:mm:ssZ');
-					customersQuery.where("customer.created_at BETWEEN :startDate AND :endDate", {startDate: startDateMoment.startOf('day').toISOString(), endDate: endDateMoment.endOf('day').toISOString()});
+					customersQuery.andWhere("customer.created_at BETWEEN :startDate AND :endDate", {startDate: startDateMoment.startOf('day').toISOString(), endDate: endDateMoment.endOf('day').toISOString()});
 				}
 				const total = await customersQuery.getCount();
 				const results = await customersQuery.skip(page-1).take(limit).getMany();

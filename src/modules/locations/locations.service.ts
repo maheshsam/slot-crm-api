@@ -47,7 +47,7 @@ export class LocationsService{
 				if(args.start_date && args.start_date !== null && args.end_date && args.end_date !== null){
 					const startDateMoment = moment(args.start_date,'YYYY-MM-DDTHH:mm:ssZ');
 					const endDateMoment = moment(args.end_date,'YYYY-MM-DDTHH:mm:ssZ');
-					resultsQuery.where("location.created_at BETWEEN :startDate AND :endDate", {startDate: startDateMoment.startOf('day').toISOString(), endDate: endDateMoment.endOf('day').toISOString()});
+					resultsQuery.andWhere("location.created_at BETWEEN :startDate AND :endDate", {startDate: startDateMoment.startOf('day').toISOString(), endDate: endDateMoment.endOf('day').toISOString()});
 				}
 				const total = await resultsQuery.getCount();
 				const results = await resultsQuery.skip(page-1).take(limit).getMany();

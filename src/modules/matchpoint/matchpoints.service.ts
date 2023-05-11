@@ -9,6 +9,8 @@ import { User } from '../../entity/User';
 import { Customer } from '../../entity/Customer';
 import { hasSuperRole, hasPermission } from 'src/lib/misc';
 import { createPaginationObject } from 'src/lib/pagination';
+import * as moment from "moment";
+
 @Injectable()
 export class MatchpointsService{
 	constructor(
@@ -26,11 +28,11 @@ export class MatchpointsService{
 			if(isSuperRole){
 				return this.repo.find({where: {id: args.matchpoint_id}, relations: { customer: true, location: true, added_by: true }});
 			}else{
-				if(hasPermission(loggedInUser,'view_all_money_in')){
+				// if(hasPermission(loggedInUser,'view_all_money_in')){
 					return this.repo.find({where: {id: args.matchpoint_id, location: loggedInUser.userLocation}, relations: { customer: true, location: true, added_by: true }});
-				}else{
-					return this.repo.find({where: {id: args.matchpoint_id, location: loggedInUser.userLocation, added_by: loggedInUser}, relations: { customer: true, location: true, added_by: true }});
-				}
+				// }else{
+					// return this.repo.find({where: {id: args.matchpoint_id, location: loggedInUser.userLocation, added_by: loggedInUser}, relations: { customer: true, location: true, added_by: true }});
+				// }
 			}
 		}
 		try{
@@ -41,11 +43,11 @@ export class MatchpointsService{
 				matchpointsQuery.leftJoinAndSelect("matchpoint.customer", "customer");
 				matchpointsQuery.leftJoinAndSelect("matchpoint.location", "location");
 				if(!isSuperRole){
-					if(hasPermission(loggedInUser,'view_all_money_in')){
+					// if(hasPermission(loggedInUser,'view_all_money_in')){
 						matchpointsQuery.andWhere("matchpoint.locationId IS NOT NULL AND matchpoint.locationId = :locationId",{locationId: loggedInUser.userLocation ? loggedInUser.userLocation.id : 0});
-					}else{
-						matchpointsQuery.andWhere("matchpoint.locationId IS NOT NULL AND matchpoint.locationId = :locationId AND matchpoint.addedById = :addedById",{locationId: loggedInUser.userLocation ? loggedInUser.userLocation.id : 0, addedById: Number(loggedInUser.id)});
-					}
+					// }else{
+						// matchpointsQuery.andWhere("matchpoint.locationId IS NOT NULL AND matchpoint.locationId = :locationId AND matchpoint.addedById = :addedById",{locationId: loggedInUser.userLocation ? loggedInUser.userLocation.id : 0, addedById: Number(loggedInUser.id)});
+					// }
 				}
 				if(args.search && args.search != ""){
 					matchpointsQuery.andWhere("LOWER(customer.first_name) LIKE LOWER(:qry) OR LOWER(customer.last_name) LIKE LOWER(:qry) OR customer.phone LIKE LOWER(:qry) OR customer.dob LIKE LOWER(:qry) OR customer.driving_license LIKE LOWER(:qry) OR LOWER(customer.city) LIKE LOWER(:qry) OR LOWER(customer.state) LIKE LOWER(:qry) OR LOWER(customer.country) LIKE LOWER(:qry) OR LOWER(customer.comments) LIKE LOWER(:qry) OR matchpoint.machine_number = :qry1", { qry: `%${args.search}%`, qry1: args.search });
@@ -53,9 +55,53 @@ export class MatchpointsService{
 				if(args.status != undefined){
 					matchpointsQuery.andWhere("matchpoint.status = :status",{ status: Number(args.status) == 1 ? true : false});
 				}
-				if(args.created_daterange && args.created_daterange != ""){
-					const genders = args.created_daterange.split("/");
-					// matchpointsQuery.where("user_details.gender IN (:gender)",{ gender: genders});
+				const openingStartTime = moment(loggedInUser.userLocation.opening_start_time ? loggedInUser.userLocation.opening_start_time : '10:30', 'HH:mm');
+				let startDate = moment();
+				let endDate = moment();
+				if(moment().isBefore(openingStartTime)){
+					startDate.subtract(1, 'day');
+				}
+				startDate.set({
+					hour:  openingStartTime.get('hour'),
+					minute: openingStartTime.get('minute'),
+					second: openingStartTime.get('second'),
+				});
+				endDate = moment(startDate).add(23,'hours').add(59, 'minutes');
+				if(args.checkin_start_date && args.checkin_start_date !== null && args.checkin_end_date && args.checkin_end_date !== null){
+					startDate = moment(args.checkin_start_date,'YYYY-MM-DDTHH:mm:ssZ');
+					startDate.set({
+						hour:  openingStartTime.get('hour'),
+						minute: openingStartTime.get('minute'),
+						second: openingStartTime.get('second'),
+					});
+					endDate = moment(args.checkin_end_date,'YYYY-MM-DDTHH:mm:ssZ').add(1,'day');
+					endDate.set({
+						hour:  openingStartTime.get('hour'),
+						minute: openingStartTime.get('minute'),
+						second: openingStartTime.get('second'),
+					});
+					endDate.subtract(1,'minute');
+				}
+				if(args.finalised_start_date && args.finalised_start_date !== null && args.finalised_start_date && args.finalised_start_date !== null){
+					startDate = moment(args.finalised_start_date,'YYYY-MM-DDTHH:mm:ssZ');
+					startDate.set({
+						hour:  openingStartTime.get('hour'),
+						minute: openingStartTime.get('minute'),
+						second: openingStartTime.get('second'),
+					});
+					endDate = moment(args.finalised_end_date,'YYYY-MM-DDTHH:mm:ssZ').add(1,'day');
+					endDate.set({
+						hour:  openingStartTime.get('hour'),
+						minute: openingStartTime.get('minute'),
+						second: openingStartTime.get('second'),
+					});
+					endDate.subtract(1,'minute');
+				}
+				console.log(startDate,endDate);
+				if(Number(args.status) == 1){
+					matchpointsQuery.andWhere("matchpoint.machine_assign_datetime BETWEEN :startDate AND :endDate", {startDate: startDate.toISOString(), endDate: endDate.toISOString()});
+				}else{
+					matchpointsQuery.andWhere("matchpoint.check_in_datetime BETWEEN :startDate AND :endDate", {startDate: startDate.toISOString(), endDate: endDate.toISOString()});
 				}
 				const total = await matchpointsQuery.getCount();
 				const results = await matchpointsQuery.skip(page-1).take(limit).getMany();
@@ -64,7 +110,11 @@ export class MatchpointsService{
 		}catch(e){
 			console.log(e);
 		}
-		return this.repo.find({relations: { added_by: true }});
+		if(isSuperRole){
+			return createPaginationObject<MatchPoint>(await this.repo.find({where: {status: Number(args.status) == 1 ? true : false}, relations: { customer: true, added_by: true }}), await this.repo.count(), page, limit);
+		}else{
+			return createPaginationObject<MatchPoint>(await this.repo.find({where: {status: Number(args.status) == 1 ? true : false, location: loggedInUser.userLocation}, relations: { customer: true, added_by: true }}), await this.repo.count(), page, limit);
+		}
 	}
 
 	async checkin(args: any) {
