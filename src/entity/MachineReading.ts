@@ -2,6 +2,7 @@ import { Entity, PrimaryGeneratedColumn, Column, JoinColumn, OneToOne, ManyToOne
 import { User } from "./User";
 import { Location } from "./Location";
 import { Persistable } from "./Persistable";
+import { Machine } from "./Machine";
 
 @Entity()
 export class MachineReading {
@@ -46,6 +47,10 @@ export class MachineReading {
     @ManyToOne((type) => Location)
     @JoinColumn()
     location: Location
+
+    @OneToOne((type) => Machine)
+    @JoinColumn()
+    machine: Machine
 
     @Column(() => Persistable, { prefix: false })
     persistable: Persistable;

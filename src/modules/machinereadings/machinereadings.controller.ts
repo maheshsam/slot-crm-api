@@ -12,7 +12,7 @@ export class MachineReadingsController{
 
 	@Get()
 	@HasPermissions('view_machine_readings')
-	list(@LoggedInUser() loggedInUser: User, @Param('readingId') readingId?: number, @Query() qry?: GetMachineReadingssDto){
+	list(@LoggedInUser() loggedInUser: User, @Query() qry?: GetMachineReadingssDto){
 		const args = {...qry!, loggedInUser};
 		return this.machineReadingsService.find(args);
 	}

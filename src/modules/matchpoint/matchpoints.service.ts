@@ -97,7 +97,6 @@ export class MatchpointsService{
 					});
 					endDate.subtract(1,'minute');
 				}
-				console.log(startDate,endDate);
 				if(Number(args.status) == 1){
 					matchpointsQuery.andWhere("matchpoint.machine_assign_datetime BETWEEN :startDate AND :endDate", {startDate: startDate.toISOString(), endDate: endDate.toISOString()});
 				}else{
