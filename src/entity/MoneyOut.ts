@@ -39,6 +39,9 @@ export class MoneyOut {
     @Column({nullable: true})
     machine_number: number
 
+    @Column({nullable: true, type: 'text'})
+    photo: string
+
     @Column({nullable: true, type: 'datetime'})
     added_datetime: string
 

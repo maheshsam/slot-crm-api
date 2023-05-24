@@ -126,7 +126,7 @@ export class MatchpointsService{
 	    }
 
 	    if(loggedInUser && loggedInUser.userLocation){
-	    	const matchpoint = this.repo.create({...checkInDto, check_in_datetime: String(Date.now()), added_by: loggedInUser, current_user: loggedInUser, location: loggedInUser.userLocation, customer: customerExists});
+	    	const matchpoint = this.repo.create({...checkInDto, check_in_datetime: moment().toISOString(), added_by: loggedInUser, current_user: loggedInUser, location: loggedInUser.userLocation, customer: customerExists});
 			await this.repo.save(matchpoint);
 			if(loggedInUser){
 				matchpoint.persistable.created_by = loggedInUser;
@@ -170,8 +170,9 @@ export class MatchpointsService{
 		if(!matchpoint){
 			throw new NotFoundException('Invalid location');
 		}
+		matchpoint.current_user = loggedInUser;
 		matchpoint.machine_number = body.machine_number;
-		matchpoint.machine_assign_datetime = String(Date.now());
+		matchpoint.machine_assign_datetime = moment().toISOString();
 		matchpoint.status = true;
 		await this.repo.save(matchpoint);
 		if(loggedInUser){

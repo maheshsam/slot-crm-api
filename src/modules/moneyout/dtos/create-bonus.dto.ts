@@ -20,6 +20,10 @@ export class CreateBonusDto {
 	@IsString()
 	comments: string
 
+	@ApiProperty()
+	@IsString()
+	photo: string
+
 	@IsOptional()
 	added_by:any
 
