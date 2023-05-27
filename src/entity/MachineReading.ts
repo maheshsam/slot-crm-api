@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, JoinColumn, OneToOne, ManyToOne } from "typeorm";
+import { Entity, PrimaryGeneratedColumn, Column, JoinColumn, OneToOne, ManyToOne, ManyToMany } from "typeorm";
 import { User } from "./User";
 import { Location } from "./Location";
 import { Persistable } from "./Persistable";
@@ -48,7 +48,7 @@ export class MachineReading {
     @JoinColumn()
     location: Location
 
-    @OneToOne((type) => Machine)
+    @ManyToOne((type) => Machine)
     @JoinColumn()
     machine: Machine
 
