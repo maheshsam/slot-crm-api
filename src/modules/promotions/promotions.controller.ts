@@ -47,6 +47,7 @@ export class PromotionsController{
 	@Patch('/raffle/:recordId')
 	@HasPermissions('update_raffle')
 	updateRaffle(@LoggedInUser() loggedInUser: User, @Param('recordId') recordId: string, @Body() body: UpdatePromotionDto){
+		body['prize_type'] = body.prize_type == "cash" ? PrizeType.CASH : PrizeType.OTHER;
 		const args = {body, id: parseInt(recordId), loggedInUser};
 		return this.promotionsService.update(args);
 	}

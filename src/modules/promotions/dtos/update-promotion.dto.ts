@@ -16,6 +16,10 @@ export class UpdatePromotionDto {
 
 	@ApiProperty()
 	@IsOptional()
+	prize_type: any
+
+	@ApiProperty()
+	@IsOptional()
 	comments: string
 
 }
