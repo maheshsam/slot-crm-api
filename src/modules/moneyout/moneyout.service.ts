@@ -38,12 +38,7 @@ export class MoneyOutService{
 			if(Object.keys(args).length > 0){
 				const resultsQuery = this.repo.createQueryBuilder("money_out");
 				resultsQuery.leftJoinAndSelect("money_out.added_by", "user");
-				if(args.money_out_type == "BONUS"){
-					resultsQuery.leftJoinAndSelect("money_out.customer", "customer");
-					resultsQuery.andWhere("money_out.money_out_type = :type",{type: MoneyOutType.BONUS});
-				}else{
-					resultsQuery.andWhere("money_out.money_out_type = :type",{type: MoneyOutType.EXPENSES});
-				}
+				resultsQuery.andWhere("money_out.money_out_type = :type",{type: args.money_out_type});
 				if(!isSuperRole){
 					if(hasPermission(loggedInUser, 'view_all_money_out')){
 						resultsQuery.andWhere("money_out.locationId IS NOT NULL AND money_out.locationId = :locationId",{locationId: loggedInUser.userLocation ? loggedInUser.userLocation.id : 0});
@@ -81,7 +76,7 @@ export class MoneyOutService{
 					});
 					endDate.subtract(1,'minute');
 				}
-				resultsQuery.where("money_out.created_at BETWEEN :startDate AND :endDate", {startDate: startDate.startOf('day').toISOString(), endDate: endDate.endOf('day').toISOString()});
+				resultsQuery.andWhere("money_out.created_at BETWEEN :startDate AND :endDate", {startDate: startDate.startOf('day').toISOString(), endDate: endDate.endOf('day').toISOString()});
 				const total = await resultsQuery.getCount();
 				const results = await resultsQuery.skip(page-1).take(limit).getMany();
 				return createPaginationObject<MoneyOut>(results, total, page, limit);

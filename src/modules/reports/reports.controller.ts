@@ -4,6 +4,7 @@ import { LoggedInUser } from '../../common/decorators/index';
 import { HasPermissions } from '../../common/decorators/has-permissions.decorator';
 import { User } from '../../entity/User';
 import { GetProfitLossDto } from './dtos/get-profit-loss.dto';
+import { GetEmpShiftSummaryDto } from './dtos/get-emp-shift-summary.dto';
 
 @Controller('reports')
 export class ReportsController{
@@ -11,9 +12,16 @@ export class ReportsController{
 
 	@Get('/profit-loss')
 	@HasPermissions('view_pl_report')
-	list(@LoggedInUser() loggedInUser: User, @Query() qry?: GetProfitLossDto){
+	getPL(@LoggedInUser() loggedInUser: User, @Query() qry?: GetProfitLossDto){
 		const args = {...qry!, loggedInUser};
 		return this.reportsService.profitloss(args);
+	}
+
+	@Get('/emp-shift-summary')
+	@HasPermissions('view_employee_shift_summary')
+	getEmpSummary(@LoggedInUser() loggedInUser: User, @Query() qry?: GetEmpShiftSummaryDto){
+		const args = {...qry!, loggedInUser};
+		return this.reportsService.empshiftsummary(args);
 	}
 
 }

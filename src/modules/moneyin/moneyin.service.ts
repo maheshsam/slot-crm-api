@@ -79,7 +79,7 @@ export class MoneyInService{
 					});
 					endDate.subtract(1,'minute');
 				}
-				resultsQuery.where("money_in.created_at BETWEEN :startDate AND :endDate", {startDate: startDate.startOf('day').toISOString(), endDate: endDate.endOf('day').toISOString()});
+				resultsQuery.where("money_in.created_at BETWEEN :startDate AND :endDate", {startDate: moment(startDate).toISOString(), endDate: moment(endDate).toISOString()});
 				const total = await resultsQuery.getCount();
 				const results = await resultsQuery.skip(page-1).take(limit).getMany();
 				return createPaginationObject<MoneyIn>(results, total, page, limit);

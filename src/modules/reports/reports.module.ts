@@ -8,9 +8,11 @@ import { MoneyIn } from 'src/entity/MoneyIn';
 import { MoneyOut } from 'src/entity/MoneyOut';
 import { Promotion } from 'src/entity/Promotion';
 import { MatchPoint } from 'src/entity/MatchPoint';
+import { TicketOut } from 'src/entity/TicketOut';
+import { Machine } from 'src/entity/Machine';
 
 @Module({
-	imports: [TypeOrmModule.forFeature([MachineReading,User,MoneyIn, MoneyOut, Promotion, MatchPoint])],
+	imports: [TypeOrmModule.forFeature([MachineReading,User,MoneyIn, MoneyOut, Promotion, MatchPoint, TicketOut, User, Machine])],
 	controllers: [ReportsController],
 	providers: [ReportsService]
 })
