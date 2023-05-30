@@ -71,7 +71,7 @@ export class TicketoutsService{
 					});
 					endDate.subtract(1,'minute');
 				}
-				resultsQuery.where("ticket_out.created_at BETWEEN :startDate AND :endDate", {startDate: startDate.startOf('day').toISOString(), endDate: endDate.endOf('day').toISOString()});
+				resultsQuery.andWhere("ticket_out.created_at BETWEEN :startDate AND :endDate", {startDate: startDate.startOf('day').toISOString(), endDate: endDate.endOf('day').toISOString()});
 				const total = await resultsQuery.getCount();
 				const results = await resultsQuery.skip(page-1).take(limit).getMany();
 				return createPaginationObject<TicketOut>(results, total, page, limit);

@@ -14,6 +14,7 @@ import { MoneyOutModule } from "./moneyout/moneyout.module";
 import { MachinesModule } from "./machines/machines.module";
 import { MachineReadingssModule } from "./machinereadings/machinereadings.module";
 import { ReportsModule } from "./reports/reports.module";
+import { EmployeeShiftsModule } from "./employeeshifts/employeeshifts.module";
 
 @Module({
 	imports: [
@@ -32,6 +33,7 @@ import { ReportsModule } from "./reports/reports.module";
 		MachinesModule,
 		MachineReadingssModule,
 		ReportsModule,
+		EmployeeShiftsModule
 	],
 })
 export class IndexModule {}
