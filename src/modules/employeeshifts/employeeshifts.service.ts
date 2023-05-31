@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, ConflictException, NotAcceptableException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Between } from 'typeorm';
+import { Repository, Between, IsNull } from 'typeorm';
 import { GetEmployeeShiftsDto } from './dtos/get-employee-shift.dto';
 import { UpsertEmployeeShiftDto } from './dtos/upsert-employee-shift.dto';
 import { User } from '../../entity/User';
@@ -27,6 +27,21 @@ export class EmployeeShiftsService{
 			}else{
 				return this.repo.findOne({where: {id: args.id, location: loggedInUser.userLocation}, relations: { user: true }});
 			}
+		}
+		if(args.get_current != undefined && String(args.get_current) == "1"){
+			let startDate = moment();
+			let endDate = moment();
+			const openingStartTime = moment(loggedInUser.userLocation.opening_start_time ? loggedInUser.userLocation.opening_start_time : '10:30', 'HH:mm');
+			if(moment().isBefore(openingStartTime)){
+				startDate.subtract(1, 'day');
+			}
+			startDate.set({
+				hour:  openingStartTime.get('hour'),
+				minute: openingStartTime.get('minute'),
+				second: openingStartTime.get('second'),
+			});
+			endDate = moment(startDate).add(23,'hours').add(59, 'minutes');
+			return this.repo.findOne({where: {start_time: Between((startDate).toISOString(), (endDate).toISOString()), end_time: IsNull(), user: loggedInUser, location: loggedInUser.userLocation}, relations: { user: true }});
 		}
 		try{
 			if(Object.keys(args).length > 0){
