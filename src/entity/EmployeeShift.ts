@@ -30,6 +30,9 @@ export class EmployeeShift {
     @JoinColumn()
     location: Location
 
+    @Column({nullable: true, type: 'text'})
+    comments: string
+
     @Column(() => Persistable, { prefix: false })
     persistable: Persistable;
 

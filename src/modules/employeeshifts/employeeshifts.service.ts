@@ -41,7 +41,7 @@ export class EmployeeShiftsService{
 				second: openingStartTime.get('second'),
 			});
 			endDate = moment(startDate).add(23,'hours').add(59, 'minutes');
-			return this.repo.findOne({where: {start_time: Between((startDate).toISOString(), (endDate).toISOString()), end_time: IsNull(), user: loggedInUser, location: loggedInUser.userLocation}, relations: { user: true }});
+			return this.repo.findOne({where: {start_time: Between((startDate).toISOString(), (endDate).toISOString()), user: loggedInUser, location: loggedInUser.userLocation}, relations: { user: true }});
 		}
 		try{
 			if(Object.keys(args).length > 0){
@@ -124,11 +124,13 @@ export class EmployeeShiftsService{
 		if(existingEmpShift){
 			existingEmpShift.end_time = moment().toISOString();
 			existingEmpShift.ending_balance = recordDto.ending_balance;
+			existingEmpShift.comments = recordDto.comments;
 			existingEmpShift.persistable.updated_by = loggedInUser;
 			existingEmpShift.persistable.updated_at = new Date();
 			return await this.repo.save(existingEmpShift);
 		}else{
-			const employeeShift = this.repo.create({start_time: moment().toISOString(), starting_balance: recordDto.starting_balance, user: shiftUser, location: loggedInUser.userLocation});
+			const employeeShift = this.repo.create({start_time: moment().toISOString(), comments: recordDto.comments, starting_balance: recordDto.starting_balance, user: shiftUser, location: loggedInUser.userLocation});
+			await this.repo.save(employeeShift);
 			employeeShift.persistable.created_by = loggedInUser;
 			return await this.repo.save(employeeShift);
 		}

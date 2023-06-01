@@ -2,17 +2,20 @@ import { IsString, IsOptional, IsBoolean, IsNumber } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class UpsertEmployeeShiftDto {
-	@ApiProperty()
-	@IsNumber()
-	user_id: number
 
 	@ApiProperty()
+	@IsOptional()
 	@IsNumber()
-	starting_balance?: number
+	starting_balance!: number
 
 	@ApiProperty()
+	@IsOptional()
 	@IsNumber()
-	ending_balance?: number
+	ending_balance!: number
+
+	@ApiProperty()
+	@IsOptional()
+	comments?: string
 
 	@IsOptional()
 	location:any
