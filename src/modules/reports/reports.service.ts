@@ -350,25 +350,23 @@ export class ReportsService{
 		endDate = moment(endDate).subtract(1,'minute');
 
 		const moneyOutQuery = this.repoMoneyOut.createQueryBuilder("money_out");
-		moneyOutQuery.select(['money_out.money_out_type', 'money_out.sub_type', 'money_out.amount', 'money_out.persistable.created_at']);
-		moneyOutQuery.andWhere("money_out.locationId IS NOT NULL AND money_out.locationId = :locationId",{locationId: loggedInUser.userLocation ? loggedInUser.userLocation.id : 0});
+		moneyOutQuery.leftJoinAndSelect("machine","machine","machine.machine_number = money_out.machine_number");
+		moneyOutQuery.select(['money_out.money_out_type', 'money_out.sub_type', 'money_out.amount','machine.machine_number','machine.machine_type']);
+		moneyOutQuery.andWhere("money_out.money_out_type = 'BONUS' AND money_out.machine_number IS NOT NULL AND money_out.locationId IS NOT NULL AND money_out.locationId = :locationId",{locationId: loggedInUser.userLocation ? loggedInUser.userLocation.id : 0});
 		moneyOutQuery.andWhere("money_out.created_at BETWEEN :startDate AND :endDate", {startDate: startDate.toISOString(), endDate: endDate.toISOString()});
 		if(user && userid !== 0){
 			moneyOutQuery.andWhere("money_out.addedById = :userid",{userid});
 		}
-		const moneyOut = await moneyOutQuery.getMany();
+		const moneyOut = await moneyOutQuery.getRawMany();
 		let moneyOutTotal: number = 0;
 		let bonusTotal: number = 0;
 		let expensesTotal: number = 0;
 		let expensesCount: number = 0;
 		if(moneyOut){
 			moneyOut.forEach((item) => {
-				moneyOutTotal += Number(item.amount);
-				if(item.money_out_type == "BONUS"){
-					bonusTotal += Number(item.amount);
-				}else{
-					expensesTotal += Number(item.amount);
-					expensesCount += 1;
+				moneyOutTotal += Number(item.money_out_amount);
+				if(item.money_out_money_out_type == "BONUS"){
+					bonusTotal += Number(item.money_out_amount);
 				}
 			})
 		}
@@ -389,19 +387,9 @@ export class ReportsService{
 			})
 		}
 
-		const totalTicketOutsWithName = totalTicketOutsRes.map((item) => {
-			const machietype = MachineTypes.filter((itemtype) => itemtype.key === item.machine_machine_type)
-			if(machietype){
-				item['machine_machine_type_name'] = machietype[0]['label'];
-			}else{
-				item['machine_machine_type_name'] = 'N/A';
-			}
-			return item;
-		})
-
 
 		const helper = {};
-		const totalTicketOuts = totalTicketOutsWithName.reduce(function(r, o) {
+		const totalTicketOuts = totalTicketOutsRes.reduce(function(r, o) {
 			const key = o.machine_machine_type
 			
 			if(!helper[key]) {
