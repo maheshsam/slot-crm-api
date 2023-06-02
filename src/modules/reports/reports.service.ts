@@ -13,6 +13,7 @@ import { hasSuperRole, hasPermission } from 'src/lib/misc';
 import * as moment from 'moment';
 import { GetProfitLossDto } from './dtos/get-profit-loss.dto';
 import { GetEmpShiftSummaryDto } from './dtos/get-emp-shift-summary.dto';
+import { EmployeeShift } from 'src/entity/EmployeeShift';
 
 @Injectable()
 export class ReportsService{
@@ -25,6 +26,7 @@ export class ReportsService{
 		@InjectRepository(Promotion) private repoPromotion: Repository<Promotion>,
 		@InjectRepository(User) private repoUser: Repository<User>,
 		@InjectRepository(Machine) private repoMachine: Repository<Machine>,
+		@InjectRepository(EmployeeShift) private repoEmployeeShift: Repository<EmployeeShift>,
 	){}
 
 	async profitloss(args?: GetProfitLossDto){
@@ -175,6 +177,11 @@ export class ReportsService{
 		});
 		endDate = moment(endDate).subtract(1,'minute');
 
+		let shiftDetails = {};
+		if(user){
+			shiftDetails = this.repoEmployeeShift.findOne({where: {start_time: Between((startDate).toISOString(), (endDate).toISOString()), user: loggedInUser, location: loggedInUser.userLocation}, relations: { user: true }});
+		}
+
 		const moneyInQuery = this.repoMoneyIn.createQueryBuilder("money_in");
 		moneyInQuery.select(['money_in.money_in_type', 'money_in.amount', 'money_in.persistable.created_at', 'money_in.comments']);
 		moneyInQuery.andWhere("money_in.locationId IS NOT NULL AND money_in.locationId = :locationId",{locationId: loggedInUser.userLocation ? loggedInUser.userLocation.id : 0});
@@ -271,7 +278,7 @@ export class ReportsService{
 			})
 		}
 
-		return {user: user, total_money_in: moneyInTotal, money_in: moneyIn, total_money_out: moneyOutTotal, money_out: moneyOut, expenses_total: expensesTotal, expenses_count: expensesCount, bonus_total: bonusTotal, ticket_outs: totalTicketOuts, total_ticket_out: totalTicketOutsSum, match_points: totalMatchPoints, total_match_points: totalMatchPointsSum };
+		return {user: user, shift_details:shiftDetails, total_money_in: moneyInTotal, money_in: moneyIn, total_money_out: moneyOutTotal, money_out: moneyOut, expenses_total: expensesTotal, expenses_count: expensesCount, bonus_total: bonusTotal, ticket_outs: totalTicketOuts, total_ticket_out: totalTicketOutsSum, match_points: totalMatchPoints, total_match_points: totalMatchPointsSum };
 	}
 
 	async matchPointsReport(args?: GetEmpShiftSummaryDto){
@@ -302,6 +309,11 @@ export class ReportsService{
 		});
 		endDate = moment(endDate).subtract(1,'minute');
 
+		let shiftDetails = {};
+		if(user){
+			shiftDetails = this.repoEmployeeShift.findOne({where: {start_time: Between((startDate).toISOString(), (endDate).toISOString()), user: loggedInUser, location: loggedInUser.userLocation}, relations: { user: true }});
+		}
+
 		const totalMatchPointsQuery = this.repoMatchPoint.createQueryBuilder("match_point");
 		totalMatchPointsQuery.leftJoinAndSelect("match_point.customer", "customer");
 		totalMatchPointsQuery.andWhere("match_point.status = 1 AND match_point.locationId IS NOT NULL AND match_point.locationId = :locationId",{locationId: loggedInUser.userLocation ? loggedInUser.userLocation.id : 0});
@@ -318,7 +330,7 @@ export class ReportsService{
 			})
 		}
 
-		return {user: user, match_points: totalMatchPoints, total_match_points: totalMatchPointsSum };
+		return {user: user, shift_details:shiftDetails, match_points: totalMatchPoints, total_match_points: totalMatchPointsSum };
 	}
 
 	async ticketoutsBonusesReport(args?: GetEmpShiftSummaryDto){
@@ -348,6 +360,11 @@ export class ReportsService{
 			second: openingStartTime.get('second'),
 		});
 		endDate = moment(endDate).subtract(1,'minute');
+
+		let shiftDetails = {};
+		if(user){
+			shiftDetails = this.repoEmployeeShift.find({where: {start_time: Between((startDate).toISOString(), (endDate).toISOString()), user: user}, relations: { user: true }});
+		}
 
 		const moneyOutQuery = this.repoMoneyOut.createQueryBuilder("money_out");
 		moneyOutQuery.leftJoinAndSelect("machine","machine","machine.machine_number = money_out.machine_number");
@@ -402,7 +419,7 @@ export class ReportsService{
 			return r;
 		}, []);
 
-		return {user: user, total_money_out: moneyOutTotal, money_out: moneyOut, expenses_total: expensesTotal, expenses_count: expensesCount, bonus_total: bonusTotal, ticket_outs: totalTicketOuts, total_ticket_out: totalTicketOutsSum };
+		return {user: user, shift_details:shiftDetails, total_money_out: moneyOutTotal, money_out: moneyOut, expenses_total: expensesTotal, expenses_count: expensesCount, bonus_total: bonusTotal, ticket_outs: totalTicketOuts, total_ticket_out: totalTicketOutsSum };
 	}
 	
 }

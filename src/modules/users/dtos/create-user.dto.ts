@@ -26,7 +26,7 @@ export class CreateUserDto{
     confirm_password: string
 
     @ApiProperty()
-    // @IsNumber()
+    @IsNumber()
     mobile: number
 
     @ApiProperty()

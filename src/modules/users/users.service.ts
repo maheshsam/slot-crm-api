@@ -54,7 +54,7 @@ export class UsersService {
 				usersQuery.leftJoinAndSelect("user.roles", "role");
 				usersQuery.leftJoinAndSelect("user.userLocation", "location");
 				if(args.search && args.search != ""){
-					usersQuery.where("LOWER(user.email) LIKE LOWER(:qry) OR LOWER(user.mobile) LIKE LOWER(:qry) OR LOWER(user.full_name) LIKE LOWER(:qry) OR LOWER(user_details.first_name) LIKE LOWER(:qry) OR LOWER(user_details.middle_name) LIKE LOWER(:qry) OR LOWER(user_details.last_name) LIKE LOWER(:qry) OR LOWER(user_details.city) LIKE LOWER(:qry) OR LOWER(user_details.state) LIKE LOWER(:qry) OR LOWER(user_details.country) LIKE LOWER(:qry)", { qry: `%${args.search}%` });
+					usersQuery.andWhere("LOWER(user.email) LIKE LOWER(:qry) OR LOWER(user.mobile) LIKE LOWER(:qry) OR LOWER(user.full_name) LIKE LOWER(:qry) OR LOWER(user_details.first_name) LIKE LOWER(:qry) OR LOWER(user_details.middle_name) LIKE LOWER(:qry) OR LOWER(user_details.last_name) LIKE LOWER(:qry) OR LOWER(user_details.city) LIKE LOWER(:qry) OR LOWER(user_details.state) LIKE LOWER(:qry) OR LOWER(user_details.country) LIKE LOWER(:qry)", { qry: `%${args.search}%` });
 				}
 
 				if(!isSuperRole){
@@ -70,7 +70,7 @@ export class UsersService {
 				if(args.start_date && args.start_date !== null && args.end_date && args.end_date !== null){
 					const startDateMoment = moment(args.start_date,'YYYY-MM-DDTHH:mm:ssZ');
 					const endDateMoment = moment(args.end_date,'YYYY-MM-DDTHH:mm:ssZ');
-					usersQuery.where("user.created_at BETWEEN :startDate AND :endDate", {startDate: startDateMoment.startOf('day').toISOString(), endDate: endDateMoment.endOf('day').toISOString()});
+					usersQuery.andWhere("user.created_at BETWEEN :startDate AND :endDate", {startDate: startDateMoment.startOf('day').toISOString(), endDate: endDateMoment.endOf('day').toISOString()});
 				}
 				if(args.role && args.role != ""){
 					usersQuery.andWhere("role.id IN (:roles)",{ roles: args.role.split(",").map( Number )});
