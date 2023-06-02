@@ -54,6 +54,9 @@ export class EmployeeShiftsService{
 						resultsQuery.andWhere("employee_shift.locationId IS NOT NULL AND employee_shift.locationId = :locationId AND employee_shift.user = :userid",{locationId: loggedInUser.userLocation ? loggedInUser.userLocation.id : 0, userid: args.user});
 					}
 				}
+				if(args.search && args.search != ""){
+					resultsQuery.andWhere("LOWER(user.full_name) LIKE LOWER(:qry) OR user.email LIKE LOWER(:qry) OR user.mobile LIKE LOWER(:qry)", { qry: `%${args.search}%` });
+				}
 				const openingStartTime = moment(loggedInUser.userLocation.opening_start_time ? loggedInUser.userLocation.opening_start_time : '10:30', 'HH:mm');
 				let startDate = moment();
 				let endDate = moment();
@@ -66,6 +69,21 @@ export class EmployeeShiftsService{
 					second: openingStartTime.get('second'),
 				});
 				endDate = moment(startDate).add(23,'hours').add(59, 'minutes');
+				if(args.start_date && args.start_date !== null && args.end_date && args.end_date !== null){
+					startDate = moment(args.start_date,'YYYY-MM-DDTHH:mm:ssZ');
+					startDate.set({
+						hour:  openingStartTime.get('hour'),
+						minute: openingStartTime.get('minute'),
+						second: openingStartTime.get('second'),
+					});
+					endDate = moment(args.end_date,'YYYY-MM-DDTHH:mm:ssZ').add(1,'day');
+					endDate.set({
+						hour:  openingStartTime.get('hour'),
+						minute: openingStartTime.get('minute'),
+						second: openingStartTime.get('second'),
+					});
+					endDate.subtract(1,'minute');
+				}
 				if(args.start_date && args.start_date !== null && args.end_date && args.end_date !== null){
 					startDate = moment(args.start_date,'YYYY-MM-DDTHH:mm:ssZ');
 					startDate.set({

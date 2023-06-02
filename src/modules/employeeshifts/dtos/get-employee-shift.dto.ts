@@ -9,6 +9,10 @@ export class GetEmployeeShiftsDto{
 
 	@ApiProperty()
 	@IsOptional()
+	search!: string
+
+	@ApiProperty()
+	@IsOptional()
 	get_current!: string
 
 	@ApiProperty()

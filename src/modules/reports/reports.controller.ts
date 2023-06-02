@@ -24,4 +24,18 @@ export class ReportsController{
 		return this.reportsService.empshiftsummary(args);
 	}
 
+	@Get('/match-points')
+	@HasPermissions('view_match_points_report')
+	getMatchPointsReport(@LoggedInUser() loggedInUser: User, @Query() qry?: GetEmpShiftSummaryDto){
+		const args = {...qry!, loggedInUser};
+		return this.reportsService.matchPointsReport(args);
+	}
+
+	@Get('/ticketouts-bonuses')
+	@HasPermissions('view_ticketouts_bonuses_report')
+	getTicketoutsBonuses(@LoggedInUser() loggedInUser: User, @Query() qry?: GetEmpShiftSummaryDto){
+		const args = {...qry!, loggedInUser};
+		return this.reportsService.ticketoutsBonusesReport(args);
+	}
+
 }

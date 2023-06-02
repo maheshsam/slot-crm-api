@@ -51,7 +51,7 @@ export class MatchpointsService{
 				}
 				if(args.search && args.search != ""){
 					matchpointsQuery.andWhere("LOWER(customer.first_name) LIKE LOWER(:qry) OR LOWER(customer.last_name) LIKE LOWER(:qry) OR customer.phone LIKE LOWER(:qry) OR customer.dob LIKE LOWER(:qry) OR customer.driving_license LIKE LOWER(:qry) OR LOWER(customer.city) LIKE LOWER(:qry) OR LOWER(customer.state) LIKE LOWER(:qry) OR LOWER(customer.country) LIKE LOWER(:qry) OR LOWER(customer.comments) LIKE LOWER(:qry) OR matchpoint.machine_number = :qry1", { qry: `%${args.search}%`, qry1: args.search });
-				}				
+				}		
 				if(args.status != undefined){
 					matchpointsQuery.andWhere("matchpoint.status = :status",{ status: Number(args.status) == 1 ? true : false});
 				}

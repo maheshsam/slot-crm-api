@@ -2,7 +2,7 @@ import { Injectable, NotFoundException, ConflictException, NotAcceptableExceptio
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Not, Equal, Between } from 'typeorm';
 import { MachineReading } from '../../entity/MachineReading';
-import { Machine } from 'src/entity/Machine';
+import { Machine, MachineTypes } from 'src/entity/Machine';
 import { User } from 'src/entity/User';
 import { MoneyIn } from 'src/entity/MoneyIn';
 import { MoneyOut } from 'src/entity/MoneyOut';
@@ -213,6 +213,208 @@ export class ReportsService{
 				}
 			})
 		}
-		return {user: user, total_money_in: moneyInTotal, money_in: moneyIn, total_money_out: moneyOutTotal, money_out: moneyOut, expenses_total: expensesTotal, expenses_count: expensesCount, bonus_total: bonusTotal };
+
+		const totalTicketOutQuery = this.repoTicketOut.createQueryBuilder("ticket_out");
+		totalTicketOutQuery.leftJoinAndSelect("machine","machine","machine.machine_number = ticket_out.machine_number");
+		totalTicketOutQuery.select(['ticket_out.ticket_out_points','machine.machine_number','machine.machine_type'])
+		totalTicketOutQuery.andWhere("ticket_out.locationId IS NOT NULL AND ticket_out.locationId = :locationId",{locationId: loggedInUser.userLocation ? loggedInUser.userLocation.id : 0});
+		totalTicketOutQuery.andWhere("ticket_out.created_at BETWEEN :startDate AND :endDate", {startDate: startDate.toISOString(), endDate: endDate.toISOString()});
+		if(user && userid !== 0){
+			totalTicketOutQuery.andWhere("ticket_out.addedById = :userid",{userid});
+		}
+		const totalTicketOutsRes = await totalTicketOutQuery.getRawMany();
+		let totalTicketOutsSum: number = 0;
+		if(totalTicketOutsRes){
+			totalTicketOutsRes.forEach((item) => {
+				totalTicketOutsSum += Number(item.ticket_out_ticket_out_points);
+			})
+		}
+
+		const totalTicketOutsWithName = totalTicketOutsRes.map((item) => {
+			const machietype = MachineTypes.filter((itemtype) => itemtype.key === item.machine_machine_type)
+			if(machietype){
+				item['machine_machine_type_name'] = machietype[0]['label'];
+			}else{
+				item['machine_machine_type_name'] = 'N/A';
+			}
+			return item;
+		})
+
+
+		const helper = {};
+		const totalTicketOuts = totalTicketOutsWithName.reduce(function(r, o) {
+			const key = o.machine_machine_type
+			
+			if(!helper[key]) {
+				helper[key] = Object.assign({}, o); // create a copy of o
+				r.push(helper[key]);
+			} else {
+				helper[key].ticket_out_ticket_out_points += o.ticket_out_ticket_out_points;
+			}
+
+			return r;
+		}, []);
+
+		const totalMatchPointsQuery = this.repoMatchPoint.createQueryBuilder("match_point");
+		totalMatchPointsQuery.select(['match_point.match_point'])
+		totalMatchPointsQuery.andWhere("match_point.status = 1 AND match_point.locationId IS NOT NULL AND match_point.locationId = :locationId",{locationId: loggedInUser.userLocation ? loggedInUser.userLocation.id : 0});
+		totalMatchPointsQuery.andWhere("match_point.check_in_datetime BETWEEN :startDate AND :endDate", {startDate: startDate.toISOString(), endDate: endDate.toISOString()});
+		if(user && userid !== 0){
+			totalMatchPointsQuery.andWhere("match_point.addedById = :userid",{userid});
+		}
+		const totalMatchPoints = await totalMatchPointsQuery.getMany();
+
+		let totalMatchPointsSum: number = 0;
+		if(totalMatchPoints){
+			totalMatchPoints.forEach((item) => {
+				totalMatchPointsSum += Number(item.match_point);
+			})
+		}
+
+		return {user: user, total_money_in: moneyInTotal, money_in: moneyIn, total_money_out: moneyOutTotal, money_out: moneyOut, expenses_total: expensesTotal, expenses_count: expensesCount, bonus_total: bonusTotal, ticket_outs: totalTicketOuts, total_ticket_out: totalTicketOutsSum, match_points: totalMatchPoints, total_match_points: totalMatchPointsSum };
 	}
+
+	async matchPointsReport(args?: GetEmpShiftSummaryDto){
+		const loggedInUser = args.loggedInUser;
+		const isSuperRole = hasSuperRole(loggedInUser);
+		let startDate = moment(args.start_date,'YYYY-MM-DDTHH:mm:ssZ');
+		let endDate = moment(args.end_date,'YYYY-MM-DDTHH:mm:ssZ');
+		let startDateCP = moment(startDate);
+		let endDateCP = moment(endDate);
+		let userid = Number(args.user);
+		
+		const user = await this.repoUser.findOne({where: {id: userid}});
+		if(!user && userid !== 0){
+			throw new NotFoundException("User Not found")
+		}
+
+		const openingStartTime = moment(loggedInUser.userLocation.opening_start_time ? loggedInUser.userLocation.opening_start_time : '10:30', 'HH:mm');
+		startDate.set({
+			hour:  openingStartTime.get('hour'),
+			minute: openingStartTime.get('minute'),
+			second: openingStartTime.get('second'),
+		});
+		endDate = moment(endDate).add(1,'day');
+		endDate.set({
+			hour:  openingStartTime.get('hour'),
+			minute: openingStartTime.get('minute'),
+			second: openingStartTime.get('second'),
+		});
+		endDate = moment(endDate).subtract(1,'minute');
+
+		const totalMatchPointsQuery = this.repoMatchPoint.createQueryBuilder("match_point");
+		totalMatchPointsQuery.leftJoinAndSelect("match_point.customer", "customer");
+		totalMatchPointsQuery.andWhere("match_point.status = 1 AND match_point.locationId IS NOT NULL AND match_point.locationId = :locationId",{locationId: loggedInUser.userLocation ? loggedInUser.userLocation.id : 0});
+		totalMatchPointsQuery.andWhere("match_point.check_in_datetime BETWEEN :startDate AND :endDate", {startDate: startDate.toISOString(), endDate: endDate.toISOString()});
+		if(user && userid !== 0){
+			totalMatchPointsQuery.andWhere("match_point.addedById = :userid",{userid});
+		}
+		const totalMatchPoints = await totalMatchPointsQuery.getMany();
+
+		let totalMatchPointsSum: number = 0;
+		if(totalMatchPoints){
+			totalMatchPoints.forEach((item) => {
+				totalMatchPointsSum += Number(item.match_point);
+			})
+		}
+
+		return {user: user, match_points: totalMatchPoints, total_match_points: totalMatchPointsSum };
+	}
+
+	async ticketoutsBonusesReport(args?: GetEmpShiftSummaryDto){
+		const loggedInUser = args.loggedInUser;
+		const isSuperRole = hasSuperRole(loggedInUser);
+		let startDate = moment(args.start_date,'YYYY-MM-DDTHH:mm:ssZ');
+		let endDate = moment(args.end_date,'YYYY-MM-DDTHH:mm:ssZ');
+		let startDateCP = moment(startDate);
+		let endDateCP = moment(endDate);
+		let userid = Number(args.user);
+		
+		const user = await this.repoUser.findOne({where: {id: userid}});
+		if(!user && userid !== 0){
+			throw new NotFoundException("User Not found")
+		}
+
+		const openingStartTime = moment(loggedInUser.userLocation.opening_start_time ? loggedInUser.userLocation.opening_start_time : '10:30', 'HH:mm');
+		startDate.set({
+			hour:  openingStartTime.get('hour'),
+			minute: openingStartTime.get('minute'),
+			second: openingStartTime.get('second'),
+		});
+		endDate = moment(endDate).add(1,'day');
+		endDate.set({
+			hour:  openingStartTime.get('hour'),
+			minute: openingStartTime.get('minute'),
+			second: openingStartTime.get('second'),
+		});
+		endDate = moment(endDate).subtract(1,'minute');
+
+		const moneyOutQuery = this.repoMoneyOut.createQueryBuilder("money_out");
+		moneyOutQuery.select(['money_out.money_out_type', 'money_out.sub_type', 'money_out.amount', 'money_out.persistable.created_at']);
+		moneyOutQuery.andWhere("money_out.locationId IS NOT NULL AND money_out.locationId = :locationId",{locationId: loggedInUser.userLocation ? loggedInUser.userLocation.id : 0});
+		moneyOutQuery.andWhere("money_out.created_at BETWEEN :startDate AND :endDate", {startDate: startDate.toISOString(), endDate: endDate.toISOString()});
+		if(user && userid !== 0){
+			moneyOutQuery.andWhere("money_out.addedById = :userid",{userid});
+		}
+		const moneyOut = await moneyOutQuery.getMany();
+		let moneyOutTotal: number = 0;
+		let bonusTotal: number = 0;
+		let expensesTotal: number = 0;
+		let expensesCount: number = 0;
+		if(moneyOut){
+			moneyOut.forEach((item) => {
+				moneyOutTotal += Number(item.amount);
+				if(item.money_out_type == "BONUS"){
+					bonusTotal += Number(item.amount);
+				}else{
+					expensesTotal += Number(item.amount);
+					expensesCount += 1;
+				}
+			})
+		}
+
+		const totalTicketOutQuery = this.repoTicketOut.createQueryBuilder("ticket_out");
+		totalTicketOutQuery.leftJoinAndSelect("machine","machine","machine.machine_number = ticket_out.machine_number");
+		totalTicketOutQuery.select(['ticket_out.ticket_out_points','machine.machine_number','machine.machine_type'])
+		totalTicketOutQuery.andWhere("ticket_out.locationId IS NOT NULL AND ticket_out.locationId = :locationId",{locationId: loggedInUser.userLocation ? loggedInUser.userLocation.id : 0});
+		totalTicketOutQuery.andWhere("ticket_out.created_at BETWEEN :startDate AND :endDate", {startDate: startDate.toISOString(), endDate: endDate.toISOString()});
+		if(user && userid !== 0){
+			totalTicketOutQuery.andWhere("ticket_out.addedById = :userid",{userid});
+		}
+		const totalTicketOutsRes = await totalTicketOutQuery.getRawMany();
+		let totalTicketOutsSum: number = 0;
+		if(totalTicketOutsRes){
+			totalTicketOutsRes.forEach((item) => {
+				totalTicketOutsSum += Number(item.ticket_out_ticket_out_points);
+			})
+		}
+
+		const totalTicketOutsWithName = totalTicketOutsRes.map((item) => {
+			const machietype = MachineTypes.filter((itemtype) => itemtype.key === item.machine_machine_type)
+			if(machietype){
+				item['machine_machine_type_name'] = machietype[0]['label'];
+			}else{
+				item['machine_machine_type_name'] = 'N/A';
+			}
+			return item;
+		})
+
+
+		const helper = {};
+		const totalTicketOuts = totalTicketOutsWithName.reduce(function(r, o) {
+			const key = o.machine_machine_type
+			
+			if(!helper[key]) {
+				helper[key] = Object.assign({}, o); // create a copy of o
+				r.push(helper[key]);
+			} else {
+				helper[key].ticket_out_ticket_out_points += o.ticket_out_ticket_out_points;
+			}
+
+			return r;
+		}, []);
+
+		return {user: user, total_money_out: moneyOutTotal, money_out: moneyOut, expenses_total: expensesTotal, expenses_count: expensesCount, bonus_total: bonusTotal, ticket_outs: totalTicketOuts, total_ticket_out: totalTicketOutsSum };
+	}
+	
 }
