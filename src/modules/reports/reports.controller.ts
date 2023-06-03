@@ -18,7 +18,7 @@ export class ReportsController{
 	}
 
 	@Get('/emp-shift-summary')
-	@HasPermissions('view_employee_shift_summary')
+	@HasPermissions('view_employee_shift_summary_report')
 	getEmpSummary(@LoggedInUser() loggedInUser: User, @Query() qry?: GetEmpShiftSummaryDto){
 		const args = {...qry!, loggedInUser};
 		return this.reportsService.empshiftsummary(args);

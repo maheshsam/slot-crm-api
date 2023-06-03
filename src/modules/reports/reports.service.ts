@@ -54,7 +54,7 @@ export class ReportsService{
 		const moneyInQuery = this.repoMoneyIn.createQueryBuilder("money_in");
 		moneyInQuery.select(['money_in.money_in_type', 'money_in.amount']);
 		moneyInQuery.andWhere("money_in.locationId IS NOT NULL AND money_in.locationId = :locationId",{locationId: loggedInUser.userLocation ? loggedInUser.userLocation.id : 0});
-		moneyInQuery.andWhere("money_in.created_at BETWEEN :startDate AND :endDate", {startDate: moment(startDate).toISOString(), endDate: endDate.toISOString()});
+		moneyInQuery.andWhere("money_in.created_at BETWEEN :startDate AND :endDate", {startDate: moment(startDate).toISOString(), endDate: moment(endDate).toISOString()});
 		const moneyIn = await moneyInQuery.getMany();
 		let moneyInTotal: number = 0;
 		if(moneyIn){
@@ -66,7 +66,7 @@ export class ReportsService{
 		const moneyOutQuery = this.repoMoneyOut.createQueryBuilder("money_out");
 		moneyOutQuery.select(['money_out.money_out_type', 'money_out.sub_type', 'money_out.amount']);
 		moneyOutQuery.andWhere("money_out.locationId IS NOT NULL AND money_out.locationId = :locationId",{locationId: loggedInUser.userLocation ? loggedInUser.userLocation.id : 0});
-		moneyOutQuery.andWhere("money_out.created_at BETWEEN :startDate AND :endDate", {startDate: startDate.toISOString(), endDate: endDate.toISOString()});
+		moneyOutQuery.andWhere("money_out.created_at BETWEEN :startDate AND :endDate", {startDate: moment(startDate).toISOString(), endDate: moment(endDate).toISOString()});
 		const moneyOut = await moneyOutQuery.getMany();
 		let moneyOutTotal: number = 0;
 		let bonusTotal: number = 0;
@@ -86,7 +86,7 @@ export class ReportsService{
 		promotionsQuery.select(['promotion.promotion_type','promotion.prize_type','promotion.prize_details'])
 		promotionsQuery.andWhere("promotion.prize_type = 'CASH'");
 		promotionsQuery.andWhere("promotion.locationId IS NOT NULL AND promotion.locationId = :locationId",{locationId: loggedInUser.userLocation ? loggedInUser.userLocation.id : 0});
-		promotionsQuery.andWhere("promotion.created_at BETWEEN :startDate AND :endDate", {startDate: startDate.toISOString(), endDate: endDate.toISOString()});
+		promotionsQuery.andWhere("promotion.created_at BETWEEN :startDate AND :endDate", {startDate: moment(startDate).toISOString(), endDate: moment(endDate).toISOString()});
 		const promotions = await promotionsQuery.getMany();
 		let promotionsTotal: number = 0;
 		if(promotions){
@@ -98,7 +98,7 @@ export class ReportsService{
 		const totalTicketOutQuery = this.repoTicketOut.createQueryBuilder("ticket_out");
 		totalTicketOutQuery.select(['ticket_out.ticket_out_points'])
 		totalTicketOutQuery.andWhere("ticket_out.locationId IS NOT NULL AND ticket_out.locationId = :locationId",{locationId: loggedInUser.userLocation ? loggedInUser.userLocation.id : 0});
-		totalTicketOutQuery.andWhere("ticket_out.created_at BETWEEN :startDate AND :endDate", {startDate: startDate.toISOString(), endDate: endDate.toISOString()});
+		totalTicketOutQuery.andWhere("ticket_out.created_at BETWEEN :startDate AND :endDate", {startDate: moment(startDate).toISOString(), endDate: moment(endDate).toISOString()});
 		const totalTicketOuts = await totalTicketOutQuery.getMany();
 
 		let totalTicketOutsSum: number = 0;
@@ -111,7 +111,7 @@ export class ReportsService{
 		const totalMatchPointsQuery = this.repoMatchPoint.createQueryBuilder("match_point");
 		totalMatchPointsQuery.select(['match_point.match_point'])
 		totalMatchPointsQuery.andWhere("match_point.status = 1 AND match_point.locationId IS NOT NULL AND match_point.locationId = :locationId",{locationId: loggedInUser.userLocation ? loggedInUser.userLocation.id : 0});
-		totalMatchPointsQuery.andWhere("match_point.check_in_datetime BETWEEN :startDate AND :endDate", {startDate: startDate.toISOString(), endDate: endDate.toISOString()});
+		totalMatchPointsQuery.andWhere("match_point.check_in_datetime BETWEEN :startDate AND :endDate", {startDate: moment(startDate).toISOString(), endDate: moment(endDate).toISOString()});
 		const totalMatchPoints = await totalMatchPointsQuery.getMany();
 
 		let totalMatchPointsSum: number = 0;
@@ -180,6 +180,20 @@ export class ReportsService{
 		let shiftDetails = {};
 		if(user){
 			shiftDetails = this.repoEmployeeShift.findOne({where: {start_time: Between((startDate).toISOString(), (endDate).toISOString()), user: loggedInUser, location: loggedInUser.userLocation}, relations: { user: true }});
+		}
+
+		const employeeShiftsQuery = this.repoEmployeeShift.createQueryBuilder("employee_shift");
+		employeeShiftsQuery.select(['employee_shift.ending_balance']);
+		employeeShiftsQuery.andWhere("employee_shift.start_time BETWEEN :startDate AND :endDate", {startDate: moment(startDate).toISOString(), endDate: moment(endDate).toISOString()});
+		if(user && userid !== 0){
+			employeeShiftsQuery.andWhere("employee_shift.userId = :userid",{userid});
+		}
+		const employeeShifts = await employeeShiftsQuery.getMany();
+		let totalEndingBalance: number = 0;
+		if(employeeShifts){
+			employeeShifts.forEach((item) => {
+				totalEndingBalance += Number(item.ending_balance);
+			})
 		}
 
 		const moneyInQuery = this.repoMoneyIn.createQueryBuilder("money_in");
@@ -278,7 +292,7 @@ export class ReportsService{
 			})
 		}
 
-		return {user: user, shift_details:shiftDetails, total_money_in: moneyInTotal, money_in: moneyIn, total_money_out: moneyOutTotal, money_out: moneyOut, expenses_total: expensesTotal, expenses_count: expensesCount, bonus_total: bonusTotal, ticket_outs: totalTicketOuts, total_ticket_out: totalTicketOutsSum, match_points: totalMatchPoints, total_match_points: totalMatchPointsSum };
+		return {user: user, shift_details:shiftDetails, total_money_in: moneyInTotal, money_in: moneyIn, total_money_out: moneyOutTotal, money_out: moneyOut, expenses_total: expensesTotal, expenses_count: expensesCount, bonus_total: bonusTotal, ticket_outs: totalTicketOuts, total_ticket_out: totalTicketOutsSum, match_points: totalMatchPoints, total_match_points: totalMatchPointsSum, employee_shifts: employeeShifts, total_ending_balance: totalEndingBalance };
 	}
 
 	async matchPointsReport(args?: GetEmpShiftSummaryDto){
@@ -388,6 +402,23 @@ export class ReportsService{
 			})
 		}
 
+		const promotionsQuery = this.repoPromotion.createQueryBuilder("promotion");
+		promotionsQuery.leftJoinAndSelect("machine","machine","machine.machine_number = promotion.machine_number");
+		promotionsQuery.select(['promotion.prize_details','machine.machine_number','machine.machine_type'])
+		promotionsQuery.andWhere("promotion.locationId IS NOT NULL AND promotion.locationId = :locationId",{locationId: loggedInUser.userLocation ? loggedInUser.userLocation.id : 0});
+		promotionsQuery.andWhere("promotion.prize_type = 'CASH' AND promotion.machine_number IS NOT NULL AND promotion.locationId IS NOT NULL AND promotion.locationId = :locationId",{locationId: loggedInUser.userLocation ? loggedInUser.userLocation.id : 0});
+		promotionsQuery.andWhere("promotion.created_at BETWEEN :startDate AND :endDate", {startDate: moment(startDate).toISOString(), endDate: moment(endDate).toISOString()});
+		if(user && userid !== 0){
+			promotionsQuery.andWhere("promotion.addedById = :userid",{userid});
+		}
+		const promotions = await promotionsQuery.getRawMany();
+		let promotionsTotal: number = 0;
+		if(promotions){
+			promotions.forEach((item) => {
+				promotionsTotal += Number(item.promotion_prize_details);
+			})
+		}
+
 		const totalTicketOutQuery = this.repoTicketOut.createQueryBuilder("ticket_out");
 		totalTicketOutQuery.leftJoinAndSelect("machine","machine","machine.machine_number = ticket_out.machine_number");
 		totalTicketOutQuery.select(['ticket_out.ticket_out_points','machine.machine_number','machine.machine_type'])
@@ -419,7 +450,7 @@ export class ReportsService{
 			return r;
 		}, []);
 
-		return {user: user, shift_details:shiftDetails, total_money_out: moneyOutTotal, money_out: moneyOut, expenses_total: expensesTotal, expenses_count: expensesCount, bonus_total: bonusTotal, ticket_outs: totalTicketOuts, total_ticket_out: totalTicketOutsSum };
+		return {user: user, shift_details:shiftDetails, total_money_out: moneyOutTotal, money_out: moneyOut, expenses_total: expensesTotal, expenses_count: expensesCount, bonus_total: bonusTotal, ticket_outs: totalTicketOuts, total_ticket_out: totalTicketOutsSum, promotions_total: promotionsTotal, promotions: promotions };
 	}
 	
 }
