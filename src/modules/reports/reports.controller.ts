@@ -38,4 +38,11 @@ export class ReportsController{
 		return this.reportsService.ticketoutsBonusesReport(args);
 	}
 
+	@Get('/dashboard-report')
+	@HasPermissions('view_reports')
+	getDashboard(@LoggedInUser() loggedInUser: User){
+		const args = loggedInUser;
+		return this.reportsService.dashboardReport(args);
+	}
+
 }

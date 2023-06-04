@@ -14,7 +14,7 @@ import * as moment from 'moment';
 import { GetProfitLossDto } from './dtos/get-profit-loss.dto';
 import { GetEmpShiftSummaryDto } from './dtos/get-emp-shift-summary.dto';
 import { EmployeeShift } from 'src/entity/EmployeeShift';
-
+import { hasRole } from 'src/lib/misc';
 @Injectable()
 export class ReportsService{
 	constructor(
@@ -122,30 +122,20 @@ export class ReportsService{
 		}
 		
 		const totalMachineReadingInQuery = this.repoMachineReading.createQueryBuilder("machine_reading");
-		totalMachineReadingInQuery.select(['machine_reading.net_in'])
+		totalMachineReadingInQuery.select(['machine_reading.net_in','machine_reading.net_out'])
 		totalMachineReadingInQuery.andWhere("machine_reading.locationId IS NOT NULL AND machine_reading.locationId = :locationId",{locationId: loggedInUser.userLocation ? loggedInUser.userLocation.id : 0});
 		totalMachineReadingInQuery.andWhere("machine_reading.reading_datetime BETWEEN :startDate AND :endDate", {startDate: moment(startDateCP).startOf('day').toISOString(), endDate: moment(endDateCP).endOf('day').toISOString()});
 		const totalMachineReadingIn = await totalMachineReadingInQuery.getMany();
 
 		let totalMachineReadingInSum = 0;
+		let totalMachineReadingOutSum = 0;
 		if(totalMachineReadingIn){
 			totalMachineReadingIn.forEach((item) => {
 				totalMachineReadingInSum = totalMachineReadingInSum + item.net_in;
-			})
-		}
-		
-		const totalMachineReadingOutQuery = this.repoMachineReading.createQueryBuilder("machine_reading");
-		totalMachineReadingOutQuery.select(['machine_reading.net_out'])
-		totalMachineReadingOutQuery.andWhere("machine_reading.locationId IS NOT NULL AND machine_reading.locationId = :locationId",{locationId: loggedInUser.userLocation ? loggedInUser.userLocation.id : 0});
-		totalMachineReadingOutQuery.andWhere("machine_reading.reading_datetime BETWEEN :startDate AND :endDate", {startDate: moment(startDateCP).startOf('day').toISOString(), endDate: moment(endDateCP).endOf('day').toISOString()});
-		const totalMachineReadingOut = await totalMachineReadingOutQuery.getMany();
-
-		let totalMachineReadingOutSum = 0;
-		if(totalMachineReadingOut){
-			totalMachineReadingOut.forEach((item) => {
 				totalMachineReadingOutSum = totalMachineReadingOutSum + item.net_out;
 			})
 		}
+		
 		return {total_money_in: moneyInTotal, total_money_out: moneyOutTotal, money_out: moneyOut, promotions_total: promotionsTotal, bonus_total: bonusTotal, expenses_total: expensesTotal, total_ticket_out: totalTicketOutsSum, total_match_points: totalMatchPointsSum, total_machine_reading_in: totalMachineReadingInSum, total_machine_reading_out: totalMachineReadingOutSum};
 	}
 
@@ -451,6 +441,80 @@ export class ReportsService{
 		}, []);
 
 		return {user: user, shift_details:shiftDetails, total_money_out: moneyOutTotal, money_out: moneyOut, expenses_total: expensesTotal, expenses_count: expensesCount, bonus_total: bonusTotal, ticket_outs: totalTicketOuts, total_ticket_out: totalTicketOutsSum, promotions_total: promotionsTotal, promotions: promotions };
+	}
+
+	async dashboardReport(loggedInUser: User){
+		const isSuperRole = hasSuperRole(loggedInUser);
+		let startDate = moment();
+		let endDate = moment();
+		let startDateCP = moment(startDate);
+		let endDateCP = moment(endDate);
+
+		const openingStartTime = moment(loggedInUser.userLocation.opening_start_time ? loggedInUser.userLocation.opening_start_time : '10:30', 'HH:mm');
+		startDate.set({
+			hour:  openingStartTime.get('hour'),
+			minute: openingStartTime.get('minute'),
+			second: openingStartTime.get('second'),
+		});
+		endDate = moment(endDate).add(1,'day');
+		endDate.set({
+			hour:  openingStartTime.get('hour'),
+			minute: openingStartTime.get('minute'),
+			second: openingStartTime.get('second'),
+		});
+		endDate = moment(endDate).subtract(1,'minute');
+
+		const totalMatchPointsQuery = this.repoMatchPoint.createQueryBuilder("match_point");
+		totalMatchPointsQuery.leftJoinAndSelect("match_point.customer", "customer");
+		totalMatchPointsQuery.andWhere("match_point.locationId IS NOT NULL AND match_point.locationId = :locationId",{locationId: loggedInUser.userLocation ? loggedInUser.userLocation.id : 0});
+		totalMatchPointsQuery.andWhere("match_point.check_in_datetime BETWEEN :startDate AND :endDate", {startDate: moment(startDate).toISOString(), endDate: moment(endDate).toISOString()});
+		if(hasRole(loggedInUser,'Employee')){
+			totalMatchPointsQuery.andWhere("match_point.addedById = :userid",{userid: loggedInUser.id});
+		}
+		const totalMatchPoints = await totalMatchPointsQuery.getMany();
+		let totalMatchPointsSum: number = 0;
+		let totalCheckedIn: number = 0;
+		if(totalMatchPoints){
+			totalMatchPoints.forEach((item) => {
+				if(item.status){
+					totalMatchPointsSum += Number(item.match_point);
+				}
+				totalCheckedIn += 1;
+			})
+		}
+
+		const totalTicketOutQuery = this.repoTicketOut.createQueryBuilder("ticket_out");
+		totalTicketOutQuery.leftJoinAndSelect("machine","machine","machine.machine_number = ticket_out.machine_number");
+		totalTicketOutQuery.select(['ticket_out.ticket_out_points','machine.machine_number','machine.machine_type'])
+		totalTicketOutQuery.andWhere("ticket_out.locationId IS NOT NULL AND ticket_out.locationId = :locationId",{locationId: loggedInUser.userLocation ? loggedInUser.userLocation.id : 0});
+		totalTicketOutQuery.andWhere("ticket_out.created_at BETWEEN :startDate AND :endDate", {startDate: startDate.toISOString(), endDate: endDate.toISOString()});
+		if(hasRole(loggedInUser,'Employee')){
+			totalTicketOutQuery.andWhere("ticket_out.addedById = :userid",{userid: loggedInUser.id});
+		}
+		const totalTicketOutsRes = await totalTicketOutQuery.getRawMany();
+		let totalTicketOutsSum: number = 0;
+		if(totalTicketOutsRes){
+			totalTicketOutsRes.forEach((item) => {
+				totalTicketOutsSum += Number(item.ticket_out_ticket_out_points);
+			})
+		}
+		
+		const totalMachineReadingInQuery = this.repoMachineReading.createQueryBuilder("machine_reading");
+		totalMachineReadingInQuery.select(['machine_reading.net_in','machine_reading.net_out'])
+		totalMachineReadingInQuery.andWhere("machine_reading.locationId IS NOT NULL AND machine_reading.locationId = :locationId",{locationId: loggedInUser.userLocation ? loggedInUser.userLocation.id : 0});
+		totalMachineReadingInQuery.andWhere("machine_reading.reading_datetime BETWEEN :startDate AND :endDate", {startDate: moment(startDateCP).startOf('day').toISOString(), endDate: moment(endDateCP).endOf('day').toISOString()});
+		const totalMachineReadingIn = await totalMachineReadingInQuery.getMany();
+
+		let totalMachineReadingInSum = 0;
+		let totalMachineReadingOutSum = 0;
+		if(totalMachineReadingIn){
+			totalMachineReadingIn.forEach((item) => {
+				totalMachineReadingInSum = totalMachineReadingInSum + item.net_in;
+				totalMachineReadingOutSum = totalMachineReadingOutSum + item.net_out;
+			})
+		}
+				
+		return {total_checked_in: totalCheckedIn, total_match_points: totalMatchPointsSum, total_ticket_outs: totalTicketOutsSum, total_net_in_machine_reading: totalMachineReadingInSum};
 	}
 	
 }
