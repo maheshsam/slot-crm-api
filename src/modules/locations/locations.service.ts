@@ -110,15 +110,12 @@ export class LocationsService{
 	async update(args: any) {
 		const loggedInUser: User = args.loggedInUser;
 		const locationId: number = args.locationId;
-		const locationDto: UpdateLocationDto = args.locationDto;
+		const locationDto: UpdateLocationDto = args.body;
 
-		if(locationDto.location_name !== undefined){
-			const locationNameExists = await this.repo.findOne({where:{location_name: locationDto.location_name, id: Not(Equal(locationId))}});
-			if (locationNameExists) {
-			throw new ConflictException('Location with given name already exists');
-			}
-		}
-		
+		const locationNameExists = await this.repo.findOne({where:{location_name: locationDto.location_name, id: Not(Equal(locationId))}});
+	    if (locationNameExists) {
+	      throw new ConflictException('Location with given name already exists');
+	    }
 		if(locationDto.userId == undefined || locationDto.userId == null){
 			throw new BadRequestException('Location with given name already exists');
 		}
