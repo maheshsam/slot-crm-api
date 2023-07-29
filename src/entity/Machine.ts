@@ -5,6 +5,34 @@ import { Persistable } from "./Persistable";
 
 export const MachineTypes = [
     {
+        key: 'firelink',
+        label: 'Firelink'
+    },
+    {
+        key: 'pot-of-gold',
+        label: 'Pot O Gold'
+    },
+    {
+        key: 'life-of-luxury',
+        label: 'Life of Luxury'
+    },
+    {
+        key: 'chinese-casino',
+        label: 'Chinese Casino'
+    },
+    {
+        key: 'fish-table',
+        label: 'Fish Table'
+    },
+    {
+        key: 'texas-keno',
+        label: 'Texas Keno'
+    },
+    {
+        key: 'other',
+        label: 'Other'
+    },
+    {
         key: 'type_1',
         label: 'Type 1'
     },

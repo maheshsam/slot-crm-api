@@ -7,7 +7,7 @@ import { User } from '../../entity/User';
 import { EmployeeShift } from 'src/entity/EmployeeShift';
 import { hasSuperRole, hasPermission } from 'src/lib/misc';
 import { createPaginationObject } from 'src/lib/pagination';
-import * as moment from "moment";
+import * as moment from "moment-timezone";
 
 @Injectable()
 export class EmployeeShiftsService{
@@ -58,9 +58,10 @@ export class EmployeeShiftsService{
 					resultsQuery.andWhere("LOWER(user.full_name) LIKE LOWER(:qry) OR user.email LIKE LOWER(:qry) OR user.mobile LIKE LOWER(:qry)", { qry: `%${args.search}%` });
 				}
 				const openingStartTime = moment(loggedInUser.userLocation.opening_start_time ? loggedInUser.userLocation.opening_start_time : '10:30', 'HH:mm');
-				let startDate = moment();
-				let endDate = moment();
-				if(moment().isBefore(openingStartTime)){
+				let startDate = moment().utc();
+				let startDateChicago = moment().tz('America/Chicago');
+				let endDate = startDate;
+				if(startDateChicago.format('YYYY-MM-DD HH:mm:ss') < openingStartTime.format('YYYY-MM-DD HH:mm:ss')){
 					startDate.subtract(1, 'day');
 				}
 				startDate.set({
@@ -70,13 +71,13 @@ export class EmployeeShiftsService{
 				});
 				endDate = moment(startDate).add(23,'hours').add(59, 'minutes');
 				if(args.start_date && args.start_date !== null && args.end_date && args.end_date !== null){
-					startDate = moment(args.start_date,'YYYY-MM-DDTHH:mm:ssZ');
+					startDate = moment(args.start_date,'YYYY-MM-DDTHH:mm:ssZ').utc();
 					startDate.set({
 						hour:  openingStartTime.get('hour'),
 						minute: openingStartTime.get('minute'),
 						second: openingStartTime.get('second'),
 					});
-					endDate = moment(args.end_date,'YYYY-MM-DDTHH:mm:ssZ').add(1,'day');
+					endDate = moment(args.end_date,'YYYY-MM-DDTHH:mm:ssZ').utc().add(1,'day');
 					endDate.set({
 						hour:  openingStartTime.get('hour'),
 						minute: openingStartTime.get('minute'),
@@ -85,13 +86,13 @@ export class EmployeeShiftsService{
 					endDate.subtract(1,'minute');
 				}
 				if(args.start_date && args.start_date !== null && args.end_date && args.end_date !== null){
-					startDate = moment(args.start_date,'YYYY-MM-DDTHH:mm:ssZ');
+					startDate = moment(args.start_date,'YYYY-MM-DDTHH:mm:ssZ').utc();
 					startDate.set({
 						hour:  openingStartTime.get('hour'),
 						minute: openingStartTime.get('minute'),
 						second: openingStartTime.get('second'),
 					});
-					endDate = moment(args.end_date,'YYYY-MM-DDTHH:mm:ssZ').add(1,'day');
+					endDate = moment(args.end_date,'YYYY-MM-DDTHH:mm:ssZ').utc().add(1,'day');
 					endDate.set({
 						hour:  openingStartTime.get('hour'),
 						minute: openingStartTime.get('minute'),
@@ -99,9 +100,10 @@ export class EmployeeShiftsService{
 					});
 					endDate.subtract(1,'minute');
 				}
-				resultsQuery.andWhere("employee_shift.start_time BETWEEN :startDate AND :endDate", {startDate: startDate.startOf('day').toISOString(), endDate: endDate.endOf('day').toISOString()});
+				resultsQuery.andWhere("employee_shift.start_time BETWEEN :startDate AND :endDate", {startDate: moment(startDate).add(5,'hours').format('YYYY-MM-DD HH:mm:ss'), endDate: moment(endDate).add(5,'hours').format('YYYY-MM-DD HH:mm:ss')});
+				resultsQuery.orderBy('employee_shift.persistable.created_at','DESC');
 				const total = await resultsQuery.getCount();
-				const results = await resultsQuery.skip(page-1).take(limit).getMany();
+				const results = await resultsQuery.skip((page-1)*limit).take(limit).getMany();
 				return createPaginationObject<EmployeeShift>(results, total, page, limit);
 			}
 		}catch(e){

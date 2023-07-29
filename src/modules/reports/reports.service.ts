@@ -1,16 +1,16 @@
 import { Injectable, NotFoundException, ConflictException, NotAcceptableException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Not, Equal, Between } from 'typeorm';
+import { Repository, Not, Equal, Between, In } from 'typeorm';
 import { MachineReading } from '../../entity/MachineReading';
 import { Machine, MachineTypes } from 'src/entity/Machine';
 import { User } from 'src/entity/User';
 import { MoneyIn } from 'src/entity/MoneyIn';
-import { MoneyOut } from 'src/entity/MoneyOut';
+import { MoneyOut, MoneyOutType } from 'src/entity/MoneyOut';
 import { MatchPoint } from 'src/entity/MatchPoint';
 import { Promotion } from 'src/entity/Promotion';
 import { TicketOut } from 'src/entity/TicketOut';
 import { hasSuperRole, hasPermission } from 'src/lib/misc';
-import * as moment from 'moment';
+import * as moment from 'moment-timezone';
 import { GetProfitLossDto } from './dtos/get-profit-loss.dto';
 import { GetEmpShiftSummaryDto } from './dtos/get-emp-shift-summary.dto';
 import { EmployeeShift } from 'src/entity/EmployeeShift';
@@ -32,12 +32,19 @@ export class ReportsService{
 	async profitloss(args?: GetProfitLossDto){
 		const loggedInUser = args.loggedInUser;
 		const isSuperRole = hasSuperRole(loggedInUser);
-		let startDate = moment(args.start_date,'YYYY-MM-DDTHH:mm:ssZ');
-		let endDate = moment(args.end_date,'YYYY-MM-DDTHH:mm:ssZ');
-		let startDateCP = moment(startDate);
-		let endDateCP = moment(endDate);
+		let startDate = moment(args.start_date,'YYYY-MM-DDTHH:mm:ssZ').utc();
+		let endDate = moment(args.end_date,'YYYY-MM-DDTHH:mm:ssZ').utc();
 
 		const openingStartTime = moment(loggedInUser.userLocation.opening_start_time ? loggedInUser.userLocation.opening_start_time : '10:30', 'HH:mm');
+		// if(startDate.format('YYYY-MM-DD HH:mm:ss') <= openingStartTime.format('YYYY-MM-DD HH:mm:ss')){
+		// 	startDate.subtract(1, 'day');
+		// }
+		if(moment(startDate,'YYYY-MM-DDTHH:mm:ssZ').isSame(moment(endDate,'YYYY-MM-DDTHH:mm:ssZ')) && !moment(startDate,'YYYY-MM-DDTHH:mm:ssZ').isBefore(moment(), 'date')){
+			let startDateChicago = moment(startDate).tz('America/Chicago');
+			if(startDateChicago.format('YYYY-MM-DD HH:mm:ss') <= openingStartTime.format('YYYY-MM-DD HH:mm:ss')){
+				startDate.subtract(1, 'day');
+			}
+		}
 		startDate.set({
 			hour:  openingStartTime.get('hour'),
 			minute: openingStartTime.get('minute'),
@@ -54,7 +61,8 @@ export class ReportsService{
 		const moneyInQuery = this.repoMoneyIn.createQueryBuilder("money_in");
 		moneyInQuery.select(['money_in.money_in_type', 'money_in.amount']);
 		moneyInQuery.andWhere("money_in.locationId IS NOT NULL AND money_in.locationId = :locationId",{locationId: loggedInUser.userLocation ? loggedInUser.userLocation.id : 0});
-		moneyInQuery.andWhere("money_in.created_at BETWEEN :startDate AND :endDate", {startDate: moment(startDate).toISOString(), endDate: moment(endDate).toISOString()});
+		moneyInQuery.andWhere("money_in.money_in_type = 'PULL'");
+		moneyInQuery.andWhere("money_in.created_at BETWEEN :startDate AND :endDate", {startDate: moment(startDate).add(5,'hours').format('YYYY-MM-DD HH:mm:ss'), endDate: moment(endDate).add(5,'hours').format('YYYY-MM-DD HH:mm:ss')});
 		const moneyIn = await moneyInQuery.getMany();
 		let moneyInTotal: number = 0;
 		if(moneyIn){
@@ -66,7 +74,7 @@ export class ReportsService{
 		const moneyOutQuery = this.repoMoneyOut.createQueryBuilder("money_out");
 		moneyOutQuery.select(['money_out.money_out_type', 'money_out.sub_type', 'money_out.amount']);
 		moneyOutQuery.andWhere("money_out.locationId IS NOT NULL AND money_out.locationId = :locationId",{locationId: loggedInUser.userLocation ? loggedInUser.userLocation.id : 0});
-		moneyOutQuery.andWhere("money_out.created_at BETWEEN :startDate AND :endDate", {startDate: moment(startDate).toISOString(), endDate: moment(endDate).toISOString()});
+		moneyOutQuery.andWhere("money_out.created_at BETWEEN :startDate AND :endDate", {startDate: moment(startDate).add(5,'hours').format('YYYY-MM-DD HH:mm:ss'), endDate: moment(endDate).add(5,'hours').format('YYYY-MM-DD HH:mm:ss')});
 		const moneyOut = await moneyOutQuery.getMany();
 		let moneyOutTotal: number = 0;
 		let bonusTotal: number = 0;
@@ -86,7 +94,7 @@ export class ReportsService{
 		promotionsQuery.select(['promotion.promotion_type','promotion.prize_type','promotion.prize_details'])
 		promotionsQuery.andWhere("promotion.prize_type = 'CASH'");
 		promotionsQuery.andWhere("promotion.locationId IS NOT NULL AND promotion.locationId = :locationId",{locationId: loggedInUser.userLocation ? loggedInUser.userLocation.id : 0});
-		promotionsQuery.andWhere("promotion.created_at BETWEEN :startDate AND :endDate", {startDate: moment(startDate).toISOString(), endDate: moment(endDate).toISOString()});
+		promotionsQuery.andWhere("promotion.created_at BETWEEN :startDate AND :endDate", {startDate: moment(startDate).add(5,'hours').format('YYYY-MM-DD HH:mm:ss'), endDate: moment(endDate).add(5,'hours').format('YYYY-MM-DD HH:mm:ss')});
 		const promotions = await promotionsQuery.getMany();
 		let promotionsTotal: number = 0;
 		if(promotions){
@@ -98,7 +106,7 @@ export class ReportsService{
 		const totalTicketOutQuery = this.repoTicketOut.createQueryBuilder("ticket_out");
 		totalTicketOutQuery.select(['ticket_out.ticket_out_points'])
 		totalTicketOutQuery.andWhere("ticket_out.locationId IS NOT NULL AND ticket_out.locationId = :locationId",{locationId: loggedInUser.userLocation ? loggedInUser.userLocation.id : 0});
-		totalTicketOutQuery.andWhere("ticket_out.created_at BETWEEN :startDate AND :endDate", {startDate: moment(startDate).toISOString(), endDate: moment(endDate).toISOString()});
+		totalTicketOutQuery.andWhere("ticket_out.created_at BETWEEN :startDate AND :endDate", {startDate: moment(startDate).add(5,'hours').format('YYYY-MM-DD HH:mm:ss'), endDate: moment(endDate).add(5,'hours').format('YYYY-MM-DD HH:mm:ss')});
 		const totalTicketOuts = await totalTicketOutQuery.getMany();
 
 		let totalTicketOutsSum: number = 0;
@@ -111,7 +119,7 @@ export class ReportsService{
 		const totalMatchPointsQuery = this.repoMatchPoint.createQueryBuilder("match_point");
 		totalMatchPointsQuery.select(['match_point.match_point'])
 		totalMatchPointsQuery.andWhere("match_point.status = 1 AND match_point.locationId IS NOT NULL AND match_point.locationId = :locationId",{locationId: loggedInUser.userLocation ? loggedInUser.userLocation.id : 0});
-		totalMatchPointsQuery.andWhere("match_point.check_in_datetime BETWEEN :startDate AND :endDate", {startDate: moment(startDate).toISOString(), endDate: moment(endDate).toISOString()});
+		totalMatchPointsQuery.andWhere("match_point.check_in_datetime BETWEEN :startDate AND :endDate", {startDate: moment(startDate).add(5,'hours').format('YYYY-MM-DD HH:mm:ss'), endDate: moment(endDate).add(5,'hours').format('YYYY-MM-DD HH:mm:ss')});
 		const totalMatchPoints = await totalMatchPointsQuery.getMany();
 
 		let totalMatchPointsSum: number = 0;
@@ -124,7 +132,7 @@ export class ReportsService{
 		const totalMachineReadingInQuery = this.repoMachineReading.createQueryBuilder("machine_reading");
 		totalMachineReadingInQuery.select(['machine_reading.net_in','machine_reading.net_out'])
 		totalMachineReadingInQuery.andWhere("machine_reading.locationId IS NOT NULL AND machine_reading.locationId = :locationId",{locationId: loggedInUser.userLocation ? loggedInUser.userLocation.id : 0});
-		totalMachineReadingInQuery.andWhere("machine_reading.reading_datetime BETWEEN :startDate AND :endDate", {startDate: moment(startDateCP).startOf('day').toISOString(), endDate: moment(endDateCP).endOf('day').toISOString()});
+		totalMachineReadingInQuery.andWhere("machine_reading.reading_datetime BETWEEN :startDate AND :endDate", {startDate: moment(startDate).add(5,'hours').format('YYYY-MM-DD HH:mm:ss'), endDate: moment(endDate).add(5,'hours').format('YYYY-MM-DD HH:mm:ss')});
 		const totalMachineReadingIn = await totalMachineReadingInQuery.getMany();
 
 		let totalMachineReadingInSum = 0;
@@ -142,10 +150,9 @@ export class ReportsService{
 	async empshiftsummary(args?: GetEmpShiftSummaryDto){
 		const loggedInUser = args.loggedInUser;
 		const isSuperRole = hasSuperRole(loggedInUser);
-		let startDate = moment(args.start_date,'YYYY-MM-DDTHH:mm:ssZ');
-		let endDate = moment(args.end_date,'YYYY-MM-DDTHH:mm:ssZ');
-		let startDateCP = moment(startDate);
-		let endDateCP = moment(endDate);
+		let startDate = moment(args.start_date,'YYYY-MM-DDTHH:mm:ssZ').utc();
+		let endDate = moment(args.end_date,'YYYY-MM-DDTHH:mm:ssZ').utc();
+		
 		let userid = Number(args.user);
 		
 		const user = await this.repoUser.findOne({where: {id: userid}});
@@ -154,6 +161,15 @@ export class ReportsService{
 		}
 
 		const openingStartTime = moment(loggedInUser.userLocation.opening_start_time ? loggedInUser.userLocation.opening_start_time : '10:30', 'HH:mm');
+		// if(startDate.format('YYYY-MM-DD HH:mm:ss') <= openingStartTime.format('YYYY-MM-DD HH:mm:ss')){
+		// 	startDate.subtract(1, 'day');
+		// }
+		if(moment(startDate,'YYYY-MM-DDTHH:mm:ssZ').isSame(moment(endDate,'YYYY-MM-DDTHH:mm:ssZ')) && !moment(startDate,'YYYY-MM-DDTHH:mm:ssZ').isBefore(moment(), 'date')){
+			let startDateChicago = moment(startDate).tz('America/Chicago');
+			if(startDateChicago.format('YYYY-MM-DD HH:mm:ss') <= moment(openingStartTime).format('YYYY-MM-DD HH:mm:ss')){
+				startDate.subtract(1, 'day');
+			}
+		}
 		startDate.set({
 			hour:  openingStartTime.get('hour'),
 			minute: openingStartTime.get('minute'),
@@ -166,15 +182,15 @@ export class ReportsService{
 			second: openingStartTime.get('second'),
 		});
 		endDate = moment(endDate).subtract(1,'minute');
-
 		let shiftDetails = {};
 		if(user){
-			shiftDetails = this.repoEmployeeShift.findOne({where: {start_time: Between((startDate).toISOString(), (endDate).toISOString()), user: loggedInUser, location: loggedInUser.userLocation}, relations: { user: true }});
+			shiftDetails = this.repoEmployeeShift.findOne({where: {start_time: Between(moment(startDate).add(5,'hours').format('YYYY-MM-DD HH:mm:ss'), moment(endDate).add(5,'hours').format('YYYY-MM-DD HH:mm:ss')), user: loggedInUser, location: loggedInUser.userLocation}, relations: { user: true }});
 		}
-
+		// console.log(startDate,endDate,moment(startDate).add(5,'hours').format('YYYY-MM-DD HH:mm:ss'), moment(endDate).add(5,'hours').format('YYYY-MM-DD HH:mm:ss'))
 		const employeeShiftsQuery = this.repoEmployeeShift.createQueryBuilder("employee_shift");
-		employeeShiftsQuery.select(['employee_shift.ending_balance']);
-		employeeShiftsQuery.andWhere("employee_shift.start_time BETWEEN :startDate AND :endDate", {startDate: moment(startDate).toISOString(), endDate: moment(endDate).toISOString()});
+		employeeShiftsQuery.select(['employee_shift.ending_balance','employee_shift.starting_balance','employee_shift.start_time']);
+		employeeShiftsQuery.andWhere("employee_shift.start_time BETWEEN :startDate AND :endDate", {startDate: moment(startDate).add(5,'hours').format('YYYY-MM-DD HH:mm:ss'), endDate: moment(endDate).add(5,'hours').format('YYYY-MM-DD HH:mm:ss')});
+		employeeShiftsQuery.andWhere("employee_shift.locationId IS NOT NULL AND employee_shift.locationId = :locationId",{locationId: loggedInUser.userLocation ? loggedInUser.userLocation.id : 0});
 		if(user && userid !== 0){
 			employeeShiftsQuery.andWhere("employee_shift.userId = :userid",{userid});
 		}
@@ -189,7 +205,7 @@ export class ReportsService{
 		const moneyInQuery = this.repoMoneyIn.createQueryBuilder("money_in");
 		moneyInQuery.select(['money_in.money_in_type', 'money_in.amount', 'money_in.persistable.created_at', 'money_in.comments']);
 		moneyInQuery.andWhere("money_in.locationId IS NOT NULL AND money_in.locationId = :locationId",{locationId: loggedInUser.userLocation ? loggedInUser.userLocation.id : 0});
-		moneyInQuery.andWhere("money_in.created_at BETWEEN :startDate AND :endDate", {startDate: moment(startDate).toISOString(), endDate: endDate.toISOString()});
+		moneyInQuery.andWhere("money_in.created_at BETWEEN :startDate AND :endDate", {startDate: moment(startDate).add(5,'hours').format('YYYY-MM-DD HH:mm:ss'), endDate: moment(endDate).add(5,'hours').format('YYYY-MM-DD HH:mm:ss')});
 		if(user && userid !== 0){
 			moneyInQuery.andWhere("money_in.addedById = :userid",{userid});
 		}
@@ -202,9 +218,10 @@ export class ReportsService{
 		}
 
 		const moneyOutQuery = this.repoMoneyOut.createQueryBuilder("money_out");
-		moneyOutQuery.select(['money_out.money_out_type', 'money_out.sub_type', 'money_out.amount', 'money_out.persistable.created_at']);
+		moneyOutQuery.select(['money_out.money_out_type', 'money_out.sub_type','money_out.comments', 'money_out.amount', 'money_out.persistable.created_at']);
 		moneyOutQuery.andWhere("money_out.locationId IS NOT NULL AND money_out.locationId = :locationId",{locationId: loggedInUser.userLocation ? loggedInUser.userLocation.id : 0});
-		moneyOutQuery.andWhere("money_out.created_at BETWEEN :startDate AND :endDate", {startDate: startDate.toISOString(), endDate: endDate.toISOString()});
+		moneyOutQuery.andWhere("money_out.money_out_type = :money_out_type",{money_out_type: MoneyOutType.EXPENSES});
+		moneyOutQuery.andWhere("money_out.created_at BETWEEN :startDate AND :endDate", {startDate: moment(startDate).add(5,'hours').format('YYYY-MM-DD HH:mm:ss'), endDate: moment(endDate).add(5,'hours').format('YYYY-MM-DD HH:mm:ss')});
 		if(user && userid !== 0){
 			moneyOutQuery.andWhere("money_out.addedById = :userid",{userid});
 		}
@@ -226,10 +243,9 @@ export class ReportsService{
 		}
 
 		const totalTicketOutQuery = this.repoTicketOut.createQueryBuilder("ticket_out");
-		totalTicketOutQuery.leftJoinAndSelect("machine","machine","machine.machine_number = ticket_out.machine_number");
-		totalTicketOutQuery.select(['ticket_out.ticket_out_points','machine.machine_number','machine.machine_type'])
+		totalTicketOutQuery.select(['ticket_out.ticket_out_points','ticket_out.machine_number'])
 		totalTicketOutQuery.andWhere("ticket_out.locationId IS NOT NULL AND ticket_out.locationId = :locationId",{locationId: loggedInUser.userLocation ? loggedInUser.userLocation.id : 0});
-		totalTicketOutQuery.andWhere("ticket_out.created_at BETWEEN :startDate AND :endDate", {startDate: startDate.toISOString(), endDate: endDate.toISOString()});
+		totalTicketOutQuery.andWhere("ticket_out.created_at BETWEEN :startDate AND :endDate", {startDate: moment(startDate).add(5,'hours').format('YYYY-MM-DD HH:mm:ss'), endDate: moment(endDate).add(5,'hours').format('YYYY-MM-DD HH:mm:ss')});
 		if(user && userid !== 0){
 			totalTicketOutQuery.andWhere("ticket_out.addedById = :userid",{userid});
 		}
@@ -240,36 +256,57 @@ export class ReportsService{
 				totalTicketOutsSum += Number(item.ticket_out_ticket_out_points);
 			})
 		}
-
-		const totalTicketOutsWithName = totalTicketOutsRes.map((item) => {
-			const machietype = MachineTypes.filter((itemtype) => itemtype.key === item.machine_machine_type)
-			if(machietype){
-				item['machine_machine_type_name'] = machietype[0]['label'];
-			}else{
-				item['machine_machine_type_name'] = 'N/A';
-			}
-			return item;
-		})
-
-
-		const helper = {};
-		const totalTicketOuts = totalTicketOutsWithName.reduce(function(r, o) {
-			const key = o.machine_machine_type
-			
-			if(!helper[key]) {
-				helper[key] = Object.assign({}, o); // create a copy of o
-				r.push(helper[key]);
+		let holder = {};
+		totalTicketOutsRes.forEach(function(d) {
+			if (holder.hasOwnProperty(d.ticket_out_machine_number)) {
+				holder[d.ticket_out_machine_number] = holder[d.ticket_out_machine_number] + d.ticket_out_ticket_out_points;
 			} else {
-				helper[key].ticket_out_ticket_out_points += o.ticket_out_ticket_out_points;
+				holder[d.ticket_out_machine_number] = d.ticket_out_ticket_out_points;
 			}
+		});
 
-			return r;
-		}, []);
+		let totalTicketOutsByMachineNumber = [];
+
+		for (let prop in holder) {
+			totalTicketOutsByMachineNumber.push({ machine_number: prop, total_ticket_out: holder[prop] });
+		}
+		
+		const allUniqueMachineNumbers = totalTicketOutsRes.map(function (el) { return el.ticket_out_machine_number; });
+		if(allUniqueMachineNumbers.length > 0){
+			allUniqueMachineNumbers.filter((value, index, array) => array.indexOf(value) === index)
+		}
+		
+		const machines = await this.repoMachine.find({where: {machine_number: In(allUniqueMachineNumbers), location: loggedInUser.userLocation}});
+		
+		const totalTicketOutsAllMachineWithMachineDetails = totalTicketOutsByMachineNumber.map((item) => {
+			const machine = machines.filter((itemtype) => itemtype.machine_number === Number(item.machine_number));
+			if(machine.length > 0){
+				const machinetype = MachineTypes.filter((itemtype) => itemtype.key === machine[0]['machine_type']);
+				return {"machine_type_key": undefined !== machinetype[0]['key'] ? machinetype[0]['key'] : 'none', "machine_type_name": undefined !== machinetype[0]['label'] ? machinetype[0]['label'] : 'N/A', "machine_number": item.machine_number, "total_ticket_out": item.total_ticket_out};
+			}
+			return {"machine_type_key": 'none', "machine_type_name": 'N_A', "machine_number": item.machine_number, "total_ticket_out": item.total_ticket_out};
+		});
+
+		let holderTotalTicketOuts = {};
+
+		totalTicketOutsAllMachineWithMachineDetails.forEach(function(d) {
+			if (holderTotalTicketOuts.hasOwnProperty(d.machine_type_name)) {
+				holderTotalTicketOuts[d.machine_type_name] = holderTotalTicketOuts[d.machine_type_name] + d.total_ticket_out;
+			} else {
+				holderTotalTicketOuts[d.machine_type_name] = d.total_ticket_out;
+			}
+		});
+
+		let totalTicketOuts = [];
+
+		for (let prop in holderTotalTicketOuts) {
+			totalTicketOuts.push({ machine_type_name: prop, total_ticket_out: holderTotalTicketOuts[prop] });
+		}
 
 		const totalMatchPointsQuery = this.repoMatchPoint.createQueryBuilder("match_point");
 		totalMatchPointsQuery.select(['match_point.match_point'])
 		totalMatchPointsQuery.andWhere("match_point.status = 1 AND match_point.locationId IS NOT NULL AND match_point.locationId = :locationId",{locationId: loggedInUser.userLocation ? loggedInUser.userLocation.id : 0});
-		totalMatchPointsQuery.andWhere("match_point.check_in_datetime BETWEEN :startDate AND :endDate", {startDate: startDate.toISOString(), endDate: endDate.toISOString()});
+		totalMatchPointsQuery.andWhere("match_point.check_in_datetime BETWEEN :startDate AND :endDate", {startDate: moment(startDate).add(5,'hours').format('YYYY-MM-DD HH:mm:ss'), endDate: moment(endDate).add(5,'hours').format('YYYY-MM-DD HH:mm:ss')});
 		if(user && userid !== 0){
 			totalMatchPointsQuery.andWhere("match_point.addedById = :userid",{userid});
 		}
@@ -288,10 +325,8 @@ export class ReportsService{
 	async matchPointsReport(args?: GetEmpShiftSummaryDto){
 		const loggedInUser = args.loggedInUser;
 		const isSuperRole = hasSuperRole(loggedInUser);
-		let startDate = moment(args.start_date,'YYYY-MM-DDTHH:mm:ssZ');
-		let endDate = moment(args.end_date,'YYYY-MM-DDTHH:mm:ssZ');
-		let startDateCP = moment(startDate);
-		let endDateCP = moment(endDate);
+		let startDate = moment(args.start_date,'YYYY-MM-DDTHH:mm:ssZ').utc();
+		let endDate = moment(args.end_date,'YYYY-MM-DDTHH:mm:ssZ').utc();
 		let userid = Number(args.user);
 		
 		const user = await this.repoUser.findOne({where: {id: userid}});
@@ -300,6 +335,16 @@ export class ReportsService{
 		}
 
 		const openingStartTime = moment(loggedInUser.userLocation.opening_start_time ? loggedInUser.userLocation.opening_start_time : '10:30', 'HH:mm');
+		
+		// if(startDate.format('YYYY-MM-DD HH:mm:ss') <= openingStartTime.format('YYYY-MM-DD HH:mm:ss')){
+		// 	startDate.subtract(1, 'day');
+		// }
+		if(moment(startDate,'YYYY-MM-DDTHH:mm:ssZ').isSame(moment(endDate,'YYYY-MM-DDTHH:mm:ssZ')) && !moment(startDate,'YYYY-MM-DDTHH:mm:ssZ').isBefore(moment(), 'date')){
+			let startDateChicago = moment(startDate).tz('America/Chicago');
+			if(startDateChicago.format('YYYY-MM-DD HH:mm:ss') <= openingStartTime.format('YYYY-MM-DD HH:mm:ss')){
+				startDate.subtract(1, 'day');
+			}
+		}
 		startDate.set({
 			hour:  openingStartTime.get('hour'),
 			minute: openingStartTime.get('minute'),
@@ -315,13 +360,13 @@ export class ReportsService{
 
 		let shiftDetails = {};
 		if(user){
-			shiftDetails = this.repoEmployeeShift.findOne({where: {start_time: Between((startDate).toISOString(), (endDate).toISOString()), user: loggedInUser, location: loggedInUser.userLocation}, relations: { user: true }});
+			shiftDetails = this.repoEmployeeShift.findOne({where: {start_time: Between((startDate).add(5,'hours').format('YYYY-MM-DD HH:mm:ss'), (endDate).add(5,'hours').format('YYYY-MM-DD HH:mm:ss')), user: loggedInUser, location: loggedInUser.userLocation}, relations: { user: true }});
 		}
 
 		const totalMatchPointsQuery = this.repoMatchPoint.createQueryBuilder("match_point");
 		totalMatchPointsQuery.leftJoinAndSelect("match_point.customer", "customer");
 		totalMatchPointsQuery.andWhere("match_point.status = 1 AND match_point.locationId IS NOT NULL AND match_point.locationId = :locationId",{locationId: loggedInUser.userLocation ? loggedInUser.userLocation.id : 0});
-		totalMatchPointsQuery.andWhere("match_point.check_in_datetime BETWEEN :startDate AND :endDate", {startDate: startDate.toISOString(), endDate: endDate.toISOString()});
+		totalMatchPointsQuery.andWhere("match_point.check_in_datetime BETWEEN :startDate AND :endDate", {startDate: moment(startDate).add(5,'hours').format('YYYY-MM-DD HH:mm:ss'), endDate: moment(endDate).add(5,'hours').format('YYYY-MM-DD HH:mm:ss')});
 		if(user && userid !== 0){
 			totalMatchPointsQuery.andWhere("match_point.addedById = :userid",{userid});
 		}
@@ -340,10 +385,8 @@ export class ReportsService{
 	async ticketoutsBonusesReport(args?: GetEmpShiftSummaryDto){
 		const loggedInUser = args.loggedInUser;
 		const isSuperRole = hasSuperRole(loggedInUser);
-		let startDate = moment(args.start_date,'YYYY-MM-DDTHH:mm:ssZ');
-		let endDate = moment(args.end_date,'YYYY-MM-DDTHH:mm:ssZ');
-		let startDateCP = moment(startDate);
-		let endDateCP = moment(endDate);
+		let startDate = moment(args.start_date,'YYYY-MM-DDTHH:mm:ssZ').utc();
+		let endDate = moment(args.end_date,'YYYY-MM-DDTHH:mm:ssZ').utc();
 		let userid = Number(args.user);
 		
 		const user = await this.repoUser.findOne({where: {id: userid}});
@@ -352,6 +395,16 @@ export class ReportsService{
 		}
 
 		const openingStartTime = moment(loggedInUser.userLocation.opening_start_time ? loggedInUser.userLocation.opening_start_time : '10:30', 'HH:mm');
+		
+		// if(startDate.format('YYYY-MM-DD HH:mm:ss') <= openingStartTime.format('YYYY-MM-DD HH:mm:ss')){
+		// 	startDate.subtract(1, 'day');
+		// }
+		if(moment(startDate,'YYYY-MM-DDTHH:mm:ssZ').isSame(moment(endDate,'YYYY-MM-DDTHH:mm:ssZ')) && !moment(startDate,'YYYY-MM-DDTHH:mm:ssZ').isBefore(moment(), 'date')){
+			let startDateChicago = moment(startDate).tz('America/Chicago');
+			if(startDateChicago.format('YYYY-MM-DD HH:mm:ss') <= openingStartTime.format('YYYY-MM-DD HH:mm:ss')){
+				startDate.subtract(1, 'day');
+			}
+		}
 		startDate.set({
 			hour:  openingStartTime.get('hour'),
 			minute: openingStartTime.get('minute'),
@@ -367,14 +420,14 @@ export class ReportsService{
 
 		let shiftDetails = {};
 		if(user){
-			shiftDetails = this.repoEmployeeShift.find({where: {start_time: Between((startDate).toISOString(), (endDate).toISOString()), user: user}, relations: { user: true }});
+			shiftDetails = this.repoEmployeeShift.find({where: {start_time: Between((startDate).add(5,'hours').format('YYYY-MM-DD HH:mm:ss'), (endDate).add(5,'hours').format('YYYY-MM-DD HH:mm:ss')), user: user}, relations: { user: true }});
 		}
 
 		const moneyOutQuery = this.repoMoneyOut.createQueryBuilder("money_out");
-		moneyOutQuery.leftJoinAndSelect("machine","machine","machine.machine_number = money_out.machine_number");
-		moneyOutQuery.select(['money_out.money_out_type', 'money_out.sub_type', 'money_out.amount','machine.machine_number','machine.machine_type']);
+		// moneyOutQuery.leftJoinAndSelect("machine","machine","machine.machine_number = money_out.machine_number");
+		moneyOutQuery.select(['money_out.money_out_type', 'money_out.sub_type', 'money_out.amount','money_out.machine_number']);
 		moneyOutQuery.andWhere("money_out.money_out_type = 'BONUS' AND money_out.machine_number IS NOT NULL AND money_out.locationId IS NOT NULL AND money_out.locationId = :locationId",{locationId: loggedInUser.userLocation ? loggedInUser.userLocation.id : 0});
-		moneyOutQuery.andWhere("money_out.created_at BETWEEN :startDate AND :endDate", {startDate: startDate.toISOString(), endDate: endDate.toISOString()});
+		moneyOutQuery.andWhere("money_out.created_at BETWEEN :startDate AND :endDate", {startDate: (startDate).add(5,'hours').format('YYYY-MM-DD HH:mm:ss'), endDate: moment(endDate).add(5,'hours').format('YYYY-MM-DD HH:mm:ss')});
 		if(user && userid !== 0){
 			moneyOutQuery.andWhere("money_out.addedById = :userid",{userid});
 		}
@@ -393,11 +446,11 @@ export class ReportsService{
 		}
 
 		const promotionsQuery = this.repoPromotion.createQueryBuilder("promotion");
-		promotionsQuery.leftJoinAndSelect("machine","machine","machine.machine_number = promotion.machine_number");
-		promotionsQuery.select(['promotion.prize_details','machine.machine_number','machine.machine_type'])
+		// promotionsQuery.leftJoinAndSelect("machine","machine","machine.machine_number = promotion.machine_number");
+		promotionsQuery.select(['promotion.prize_details','promotion.machine_number'])
 		promotionsQuery.andWhere("promotion.locationId IS NOT NULL AND promotion.locationId = :locationId",{locationId: loggedInUser.userLocation ? loggedInUser.userLocation.id : 0});
 		promotionsQuery.andWhere("promotion.prize_type = 'CASH' AND promotion.machine_number IS NOT NULL AND promotion.locationId IS NOT NULL AND promotion.locationId = :locationId",{locationId: loggedInUser.userLocation ? loggedInUser.userLocation.id : 0});
-		promotionsQuery.andWhere("promotion.created_at BETWEEN :startDate AND :endDate", {startDate: moment(startDate).toISOString(), endDate: moment(endDate).toISOString()});
+		promotionsQuery.andWhere("promotion.created_at BETWEEN :startDate AND :endDate", {startDate: moment(startDate).add(5,'hours').format('YYYY-MM-DD HH:mm:ss'), endDate: moment(endDate).add(5,'hours').format('YYYY-MM-DD HH:mm:ss')});
 		if(user && userid !== 0){
 			promotionsQuery.andWhere("promotion.addedById = :userid",{userid});
 		}
@@ -410,10 +463,10 @@ export class ReportsService{
 		}
 
 		const totalTicketOutQuery = this.repoTicketOut.createQueryBuilder("ticket_out");
-		totalTicketOutQuery.leftJoinAndSelect("machine","machine","machine.machine_number = ticket_out.machine_number");
-		totalTicketOutQuery.select(['ticket_out.ticket_out_points','machine.machine_number','machine.machine_type'])
+		// totalTicketOutQuery.leftJoinAndSelect("machine","machine","machine.machine_number = ticket_out.machine_number");
+		totalTicketOutQuery.select(['ticket_out.ticket_out_points','ticket_out.machine_number'])
 		totalTicketOutQuery.andWhere("ticket_out.locationId IS NOT NULL AND ticket_out.locationId = :locationId",{locationId: loggedInUser.userLocation ? loggedInUser.userLocation.id : 0});
-		totalTicketOutQuery.andWhere("ticket_out.created_at BETWEEN :startDate AND :endDate", {startDate: startDate.toISOString(), endDate: endDate.toISOString()});
+		totalTicketOutQuery.andWhere("ticket_out.created_at BETWEEN :startDate AND :endDate", {startDate: moment(startDate).add(5,'hours').format('YYYY-MM-DD HH:mm:ss'), endDate: moment(endDate).add(5,'hours').format('YYYY-MM-DD HH:mm:ss')});
 		if(user && userid !== 0){
 			totalTicketOutQuery.andWhere("ticket_out.addedById = :userid",{userid});
 		}
@@ -425,32 +478,52 @@ export class ReportsService{
 			})
 		}
 
-
-		const helper = {};
-		const totalTicketOuts = totalTicketOutsRes.reduce(function(r, o) {
-			const key = o.machine_machine_type
-			
-			if(!helper[key]) {
-				helper[key] = Object.assign({}, o); // create a copy of o
-				r.push(helper[key]);
+		let holder = {};
+		totalTicketOutsRes.forEach(function(d) {
+			if (holder.hasOwnProperty(d.ticket_out_machine_number)) {
+				holder[d.ticket_out_machine_number] = holder[d.ticket_out_machine_number] + d.ticket_out_ticket_out_points;
 			} else {
-				helper[key].ticket_out_ticket_out_points += o.ticket_out_ticket_out_points;
+				holder[d.ticket_out_machine_number] = d.ticket_out_ticket_out_points;
 			}
+		});
 
-			return r;
-		}, []);
+		let totalTicketOuts = [];
+
+		for (let prop in holder) {
+			totalTicketOuts.push({ machine_number: prop, total_ticket_out: holder[prop] });
+		}
+
+		// console.log("totalTicketOutsByMachineNumber",totalTicketOuts);
+		
+		// const helper = {};
+		// const totalTicketOuts = totalTicketOutsRes.reduce(function(r, o) {
+		// 	const key = o.machine_machine_type
+			
+		// 	if(!helper[key]) {
+		// 		helper[key] = Object.assign({}, o); // create a copy of o
+		// 		r.push(helper[key]);
+		// 	} else {
+		// 		helper[key].ticket_out_ticket_out_points += o.ticket_out_ticket_out_points;
+		// 	}
+
+		// 	return r;
+		// }, []);
 
 		return {user: user, shift_details:shiftDetails, total_money_out: moneyOutTotal, money_out: moneyOut, expenses_total: expensesTotal, expenses_count: expensesCount, bonus_total: bonusTotal, ticket_outs: totalTicketOuts, total_ticket_out: totalTicketOutsSum, promotions_total: promotionsTotal, promotions: promotions };
 	}
 
 	async dashboardReport(loggedInUser: User){
 		const isSuperRole = hasSuperRole(loggedInUser);
-		let startDate = moment();
-		let endDate = moment();
-		let startDateCP = moment(startDate);
-		let endDateCP = moment(endDate);
+		// let startDate = moment().tz('America/Chicago');
+		// let endDate = moment().tz('America/Chicago');
 
 		const openingStartTime = moment(loggedInUser.userLocation.opening_start_time ? loggedInUser.userLocation.opening_start_time : '10:30', 'HH:mm');
+		let startDate = moment().utc();
+		let startDateChicago = moment().tz('America/Chicago');
+		let endDate = startDate;
+		if(startDateChicago.format('YYYY-MM-DD HH:mm:ss') <= openingStartTime.format('YYYY-MM-DD HH:mm:ss')){
+			startDate.subtract(1, 'day');
+		}
 		startDate.set({
 			hour:  openingStartTime.get('hour'),
 			minute: openingStartTime.get('minute'),
@@ -464,13 +537,57 @@ export class ReportsService{
 		});
 		endDate = moment(endDate).subtract(1,'minute');
 
+		const moneyInQuery = this.repoMoneyIn.createQueryBuilder("money_in");
+		moneyInQuery.select(['money_in.money_in_type', 'money_in.amount']);
+		moneyInQuery.andWhere("money_in.locationId IS NOT NULL AND money_in.locationId = :locationId",{locationId: loggedInUser.userLocation ? loggedInUser.userLocation.id : 0});
+		moneyInQuery.andWhere("money_in.created_at BETWEEN :startDate AND :endDate", {startDate: moment(startDate).add(5,'hours').format('YYYY-MM-DD HH:mm:ss'), endDate: moment(endDate).add(5,'hours').format('YYYY-MM-DD HH:mm:ss')});
+		const moneyIn = await moneyInQuery.getMany();
+		let moneyInTotal: number = 0;
+		if(moneyIn){
+			moneyIn.forEach((item) => {
+				moneyInTotal += Number(item.amount);
+			})
+		}
+
+		const moneyOutQuery = this.repoMoneyOut.createQueryBuilder("money_out");
+		moneyOutQuery.select(['money_out.money_out_type', 'money_out.sub_type', 'money_out.amount']);
+		moneyOutQuery.andWhere("money_out.locationId IS NOT NULL AND money_out.locationId = :locationId",{locationId: loggedInUser.userLocation ? loggedInUser.userLocation.id : 0});
+		moneyOutQuery.andWhere("money_out.created_at BETWEEN :startDate AND :endDate", {startDate: moment(startDate).add(5,'hours').format('YYYY-MM-DD HH:mm:ss'), endDate: moment(endDate).add(5,'hours').format('YYYY-MM-DD HH:mm:ss')});
+		const moneyOut = await moneyOutQuery.getMany();
+		let moneyOutTotal: number = 0;
+		let bonusTotal: number = 0;
+		let expensesTotal: number = 0;
+		if(moneyOut){
+			moneyOut.forEach((item) => {
+				moneyOutTotal += Number(item.amount);
+				if(item.money_out_type == "BONUS"){
+					bonusTotal += Number(item.amount);
+				}else{
+					expensesTotal += Number(item.amount);
+				}
+			})
+		}
+
+		const promotionsQuery = this.repoPromotion.createQueryBuilder("promotion");
+		promotionsQuery.select(['promotion.promotion_type','promotion.prize_type','promotion.prize_details'])
+		promotionsQuery.andWhere("promotion.prize_type = 'CASH'");
+		promotionsQuery.andWhere("promotion.locationId IS NOT NULL AND promotion.locationId = :locationId",{locationId: loggedInUser.userLocation ? loggedInUser.userLocation.id : 0});
+		promotionsQuery.andWhere("promotion.created_at BETWEEN :startDate AND :endDate", {startDate: moment(startDate).add(5,'hours').format('YYYY-MM-DD HH:mm:ss'), endDate: moment(endDate).add(5,'hours').format('YYYY-MM-DD HH:mm:ss')});
+		const promotions = await promotionsQuery.getMany();
+		let promotionsTotal: number = 0;
+		if(promotions){
+			promotions.forEach((item) => {
+				promotionsTotal += Number(item.prize_details);
+			})
+		}
+
 		const totalMatchPointsQuery = this.repoMatchPoint.createQueryBuilder("match_point");
 		totalMatchPointsQuery.leftJoinAndSelect("match_point.customer", "customer");
 		totalMatchPointsQuery.andWhere("match_point.locationId IS NOT NULL AND match_point.locationId = :locationId",{locationId: loggedInUser.userLocation ? loggedInUser.userLocation.id : 0});
-		totalMatchPointsQuery.andWhere("match_point.check_in_datetime BETWEEN :startDate AND :endDate", {startDate: moment(startDate).toISOString(), endDate: moment(endDate).toISOString()});
-		if(hasRole(loggedInUser,'Employee')){
-			totalMatchPointsQuery.andWhere("match_point.addedById = :userid",{userid: loggedInUser.id});
-		}
+		totalMatchPointsQuery.andWhere("match_point.check_in_datetime BETWEEN :startDate AND :endDate", {startDate: moment(startDate).add(5,'hours').format('YYYY-MM-DD HH:mm:ss'), endDate: moment(endDate).add(5,'hours').format('YYYY-MM-DD HH:mm:ss')});
+		// if(hasRole(loggedInUser,'Employee')){
+		// 	totalMatchPointsQuery.andWhere("match_point.addedById = :userid",{userid: loggedInUser.id});
+		// }
 		const totalMatchPoints = await totalMatchPointsQuery.getMany();
 		let totalMatchPointsSum: number = 0;
 		let totalCheckedIn: number = 0;
@@ -484,13 +601,13 @@ export class ReportsService{
 		}
 
 		const totalTicketOutQuery = this.repoTicketOut.createQueryBuilder("ticket_out");
-		totalTicketOutQuery.leftJoinAndSelect("machine","machine","machine.machine_number = ticket_out.machine_number");
-		totalTicketOutQuery.select(['ticket_out.ticket_out_points','machine.machine_number','machine.machine_type'])
+		// totalTicketOutQuery.leftJoinAndSelect("machine","machine","machine.machine_number = ticket_out.machine_number");
+		totalTicketOutQuery.select(['ticket_out.ticket_out_points'])
 		totalTicketOutQuery.andWhere("ticket_out.locationId IS NOT NULL AND ticket_out.locationId = :locationId",{locationId: loggedInUser.userLocation ? loggedInUser.userLocation.id : 0});
-		totalTicketOutQuery.andWhere("ticket_out.created_at BETWEEN :startDate AND :endDate", {startDate: startDate.toISOString(), endDate: endDate.toISOString()});
-		if(hasRole(loggedInUser,'Employee')){
-			totalTicketOutQuery.andWhere("ticket_out.addedById = :userid",{userid: loggedInUser.id});
-		}
+		totalTicketOutQuery.andWhere("ticket_out.created_at BETWEEN :startDate AND :endDate", {startDate: startDate.add(5,'hours').format('YYYY-MM-DD HH:mm:ss'), endDate: endDate.add(5,'hours').format('YYYY-MM-DD HH:mm:ss')});
+		// if(hasRole(loggedInUser,'Employee')){
+		// 	totalTicketOutQuery.andWhere("ticket_out.addedById = :userid",{userid: loggedInUser.id});
+		// }
 		const totalTicketOutsRes = await totalTicketOutQuery.getRawMany();
 		let totalTicketOutsSum: number = 0;
 		if(totalTicketOutsRes){
@@ -502,7 +619,7 @@ export class ReportsService{
 		const totalMachineReadingInQuery = this.repoMachineReading.createQueryBuilder("machine_reading");
 		totalMachineReadingInQuery.select(['machine_reading.net_in','machine_reading.net_out'])
 		totalMachineReadingInQuery.andWhere("machine_reading.locationId IS NOT NULL AND machine_reading.locationId = :locationId",{locationId: loggedInUser.userLocation ? loggedInUser.userLocation.id : 0});
-		totalMachineReadingInQuery.andWhere("machine_reading.reading_datetime BETWEEN :startDate AND :endDate", {startDate: moment(startDateCP).startOf('day').toISOString(), endDate: moment(endDateCP).endOf('day').toISOString()});
+		totalMachineReadingInQuery.andWhere("machine_reading.reading_datetime BETWEEN :startDate AND :endDate", {startDate: moment(startDate).add(5,'hours').format('YYYY-MM-DD HH:mm:ss'), endDate: moment(endDate).add(5,'hours').format('YYYY-MM-DD HH:mm:ss')});
 		const totalMachineReadingIn = await totalMachineReadingInQuery.getMany();
 
 		let totalMachineReadingInSum = 0;
@@ -514,7 +631,7 @@ export class ReportsService{
 			})
 		}
 				
-		return {total_checked_in: totalCheckedIn, total_match_points: totalMatchPointsSum, total_ticket_outs: totalTicketOutsSum, total_net_in_machine_reading: totalMachineReadingInSum};
+		return {total_checked_in: totalCheckedIn, total_match_points: totalMatchPointsSum, total_ticket_outs: totalTicketOutsSum, total_net_in_machine_reading: totalMachineReadingInSum, total_money_in: moneyInTotal, total_money_out: moneyOutTotal + promotionsTotal + totalMatchPointsSum + totalTicketOutsSum };
 	}
 	
 }

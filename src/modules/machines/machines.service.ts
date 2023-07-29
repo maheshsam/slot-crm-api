@@ -54,8 +54,9 @@ export class MachinesService{
 				if(args.status !== undefined && args.status !== ""){
 					resultQuery.andWhere("machine.is_active = :status",{status: String(args.status) == '1' ? true : false});
 				}
+				resultQuery.orderBy('machine.persistable.created_at','DESC');
 				const total = await resultQuery.getCount();
-				const results = await resultQuery.skip(page-1).take(limit).getMany();
+				const results = await resultQuery.skip((page-1)*limit).take(limit).getMany();
 				return createPaginationObject<Machine>(results, total, page, limit);
 			}
 		}catch(e){

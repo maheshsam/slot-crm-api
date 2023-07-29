@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, ConflictException, NotAcceptableException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Not, Equal } from 'typeorm';
+import { Repository, Not, Equal, Between } from 'typeorm';
 import { CreateCheckInDto } from './dtos/create-checkin.dto';
 import { GetMatchpointsDto } from './dtos/get-matchpoints.dto';
 import { FinalisedMatchPoint } from './dtos/finalised-match-point';
@@ -9,7 +9,8 @@ import { User } from '../../entity/User';
 import { Customer } from '../../entity/Customer';
 import { hasSuperRole, hasPermission } from 'src/lib/misc';
 import { createPaginationObject } from 'src/lib/pagination';
-import * as moment from "moment";
+import * as moment from "moment-timezone";
+import { UpdateMatchPointDto } from './dtos/update-match-point-dto';
 
 @Injectable()
 export class MatchpointsService{
@@ -26,10 +27,10 @@ export class MatchpointsService{
 
 		if(args.matchpoint_id && args.matchpoint_id != undefined){
 			if(isSuperRole){
-				return this.repo.find({where: {id: args.matchpoint_id}, relations: { customer: true, location: true, added_by: true }});
+				return this.repo.findOne({where: {id: args.matchpoint_id}, relations: { customer: true, location: true, added_by: true }});
 			}else{
 				// if(hasPermission(loggedInUser,'view_all_money_in')){
-					return this.repo.find({where: {id: args.matchpoint_id, location: loggedInUser.userLocation}, relations: { customer: true, location: true, added_by: true }});
+					return this.repo.findOne({where: {id: args.matchpoint_id, location: loggedInUser.userLocation}, relations: { customer: true, location: true, added_by: true }});
 				// }else{
 					// return this.repo.find({where: {id: args.matchpoint_id, location: loggedInUser.userLocation, added_by: loggedInUser}, relations: { customer: true, location: true, added_by: true }});
 				// }
@@ -54,11 +55,19 @@ export class MatchpointsService{
 				}		
 				if(args.status != undefined){
 					matchpointsQuery.andWhere("matchpoint.status = :status",{ status: Number(args.status) == 1 ? true : false});
+					if(Number(args.status) == 1){
+						matchpointsQuery.orderBy('matchpoint.machine_assign_datetime','DESC');
+					}else{
+						matchpointsQuery.orderBy('matchpoint.check_in_datetime','DESC');
+					}
+				}else{
+					matchpointsQuery.orderBy('matchpoint.check_in_datetime','DESC');
 				}
 				const openingStartTime = moment(loggedInUser.userLocation.opening_start_time ? loggedInUser.userLocation.opening_start_time : '10:30', 'HH:mm');
-				let startDate = moment();
-				let endDate = moment();
-				if(moment().isBefore(openingStartTime)){
+				let startDate = moment().utc();
+				let startDateChicago = moment().tz('America/Chicago');
+				let endDate = startDate;
+				if(startDateChicago.format('YYYY-MM-DD HH:mm:ss') < openingStartTime.format('YYYY-MM-DD HH:mm:ss')){
 					startDate.subtract(1, 'day');
 				}
 				startDate.set({
@@ -68,13 +77,13 @@ export class MatchpointsService{
 				});
 				endDate = moment(startDate).add(23,'hours').add(59, 'minutes');
 				if(args.checkin_start_date && args.checkin_start_date !== null && args.checkin_end_date && args.checkin_end_date !== null){
-					startDate = moment(args.checkin_start_date,'YYYY-MM-DDTHH:mm:ssZ');
+					startDate = moment(args.checkin_start_date,'YYYY-MM-DDTHH:mm:ssZ').utc();
 					startDate.set({
 						hour:  openingStartTime.get('hour'),
 						minute: openingStartTime.get('minute'),
 						second: openingStartTime.get('second'),
 					});
-					endDate = moment(args.checkin_end_date,'YYYY-MM-DDTHH:mm:ssZ').add(1,'day');
+					endDate = moment(args.checkin_end_date,'YYYY-MM-DDTHH:mm:ssZ').utc().add(1,'day');
 					endDate.set({
 						hour:  openingStartTime.get('hour'),
 						minute: openingStartTime.get('minute'),
@@ -83,13 +92,13 @@ export class MatchpointsService{
 					endDate.subtract(1,'minute');
 				}
 				if(args.finalised_start_date && args.finalised_start_date !== null && args.finalised_start_date && args.finalised_start_date !== null){
-					startDate = moment(args.finalised_start_date,'YYYY-MM-DDTHH:mm:ssZ');
+					startDate = moment(args.finalised_start_date,'YYYY-MM-DDTHH:mm:ssZ').utc();
 					startDate.set({
 						hour:  openingStartTime.get('hour'),
 						minute: openingStartTime.get('minute'),
 						second: openingStartTime.get('second'),
 					});
-					endDate = moment(args.finalised_end_date,'YYYY-MM-DDTHH:mm:ssZ').add(1,'day');
+					endDate = moment(args.finalised_end_date,'YYYY-MM-DDTHH:mm:ssZ').utc().add(1,'day');
 					endDate.set({
 						hour:  openingStartTime.get('hour'),
 						minute: openingStartTime.get('minute'),
@@ -98,12 +107,15 @@ export class MatchpointsService{
 					endDate.subtract(1,'minute');
 				}
 				if(Number(args.status) == 1){
-					matchpointsQuery.andWhere("matchpoint.machine_assign_datetime BETWEEN :startDate AND :endDate", {startDate: startDate.toISOString(), endDate: endDate.toISOString()});
+					matchpointsQuery.andWhere("matchpoint.machine_assign_datetime BETWEEN :startDate AND :endDate", {startDate: moment(startDate).add(5,'hours').format('YYYY-MM-DD HH:mm:ss'), endDate: moment(endDate).add(5,'hours').format('YYYY-MM-DD HH:mm:ss')});
 				}else{
-					matchpointsQuery.andWhere("matchpoint.check_in_datetime BETWEEN :startDate AND :endDate", {startDate: startDate.toISOString(), endDate: endDate.toISOString()});
+					matchpointsQuery.andWhere("matchpoint.check_in_datetime BETWEEN :startDate AND :endDate", {startDate: moment(startDate).add(5,'hours').format('YYYY-MM-DD HH:mm:ss'), endDate: moment(endDate).add(5,'hours').format('YYYY-MM-DD HH:mm:ss')});
 				}
 				const total = await matchpointsQuery.getCount();
-				const results = await matchpointsQuery.skip(page-1).take(limit).getMany();
+				const results = await matchpointsQuery.skip((page-1)*limit).take(limit).getMany();
+				if(args.export !== undefined && Number(args.export) == 1){
+					return await matchpointsQuery.getMany();
+				}
 				return createPaginationObject<MatchPoint>(results, total, page, limit);
 			}
 		}catch(e){
@@ -126,7 +138,33 @@ export class MatchpointsService{
 	    }
 
 	    if(loggedInUser && loggedInUser.userLocation){
-	    	const matchpoint = this.repo.create({...checkInDto, check_in_datetime: moment().toISOString(), added_by: loggedInUser, current_user: loggedInUser, location: loggedInUser.userLocation, customer: customerExists});
+			const matchPointRestrictionTime = loggedInUser.userLocation.match_point_restrictions_hours ? loggedInUser.userLocation.match_point_restrictions_hours : '6:00';
+			const matchPointRestrictionTimeSplit = matchPointRestrictionTime.split(":");
+			const matchPointRestrictionTimeHours = Number(matchPointRestrictionTimeSplit[0]);
+			const matchPointRestrictionTimeMinutes = matchPointRestrictionTimeSplit.length > 1 ? Number(matchPointRestrictionTimeSplit[1]) : 0;
+			const matchPointRestrictionCurrentDate = moment();
+			const matchPointRestrictionStartDate = moment(matchPointRestrictionCurrentDate).subtract(matchPointRestrictionTimeHours, 'hours').subtract(matchPointRestrictionTimeMinutes,'minutes');
+			const openingStartTime = moment(loggedInUser.userLocation.opening_start_time ? loggedInUser.userLocation.opening_start_time : '10:30', 'HH:mm');
+			let openingStartDate = moment();
+			openingStartDate.set({
+				hour:  openingStartTime.get('hour'),
+				minute: openingStartTime.get('minute'),
+				second: openingStartTime.get('second'),
+			});
+			if(openingStartDate <= matchPointRestrictionStartDate){
+				const matchPointExists = await this.repo.find({where: {customer: customerExists, location: loggedInUser.userLocation, check_in_datetime: Between(matchPointRestrictionStartDate.toISOString(),matchPointRestrictionCurrentDate.toISOString())}});
+				if(matchPointExists.length > 0){
+					throw new NotAcceptableException('Match point already assigned');
+				}
+			}
+			if(checkInDto.match_point <= 0){
+				throw new NotAcceptableException('Match point can not be less than equal to zero');
+			}
+			const matchPointExists = await this.repo.find({where: {customer: customerExists, location: loggedInUser.userLocation, check_in_datetime: Between(matchPointRestrictionStartDate.toISOString(),matchPointRestrictionCurrentDate.toISOString())}});
+			if(matchPointExists.length > 0){
+				throw new NotAcceptableException('Match point already assigned');	
+			}
+	    	const matchpoint = this.repo.create({...checkInDto, check_in_datetime: moment().utc().toISOString(), added_by: loggedInUser, current_user: loggedInUser, location: loggedInUser.userLocation, customer: customerExists});
 			await this.repo.save(matchpoint);
 			if(loggedInUser){
 				matchpoint.persistable.created_by = loggedInUser;
@@ -172,13 +210,30 @@ export class MatchpointsService{
 		}
 		matchpoint.current_user = loggedInUser;
 		matchpoint.machine_number = body.machine_number;
-		matchpoint.machine_assign_datetime = moment().toISOString();
+		matchpoint.machine_assign_datetime = moment().utc().toISOString();
 		matchpoint.status = true;
 		await this.repo.save(matchpoint);
 		if(loggedInUser){
 			matchpoint.persistable.updated_by = loggedInUser;
 		}
 		return this.repo.save(matchpoint);
+	}
+
+	async update(args: any){
+		const loggedInUser = args.loggedInUser;
+		const body: UpdateMatchPointDto = args.body;
+		const matchpoint = await this.repo.findOne({ where: {id: body.id, location: loggedInUser.userLocation}});
+		if(!matchpoint){
+			throw new NotFoundException('Invalid location');
+		}
+		matchpoint.current_user = loggedInUser;
+		matchpoint.machine_number = body.machine_number;
+		matchpoint.match_point = body.match_point;
+		await this.repo.save(matchpoint);
+		if(loggedInUser){
+			matchpoint.persistable.updated_by = loggedInUser;
+		}
+		return await this.repo.save(matchpoint);
 	}
 
 }

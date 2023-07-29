@@ -33,6 +33,10 @@ export class GetCustomersDto{
 
 	@ApiProperty()
 	@IsOptional()
+	export!: boolean
+
+	@ApiProperty()
+	@IsOptional()
 	page!: number
 
 	@ApiProperty()

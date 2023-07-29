@@ -8,7 +8,8 @@ import { Customer } from '../../entity/Customer';
 import { TicketOut } from 'src/entity/TicketOut';
 import { hasSuperRole, hasPermission } from 'src/lib/misc';
 import { createPaginationObject } from 'src/lib/pagination';
-import * as moment from "moment";
+import * as moment from "moment-timezone";
+import { start } from 'repl';
 
 @Injectable()
 export class TicketoutsService{
@@ -44,10 +45,12 @@ export class TicketoutsService{
 				if(args.search && args.search != ""){
 					resultsQuery.andWhere("LOWER(customer.first_name) LIKE LOWER(:qry) OR LOWER(customer.last_name) LIKE LOWER(:qry) OR customer.phone LIKE LOWER(:qry) OR customer.dob LIKE LOWER(:qry) OR customer.driving_license LIKE LOWER(:qry) OR LOWER(customer.city) LIKE LOWER(:qry) OR LOWER(customer.state) LIKE LOWER(:qry) OR LOWER(customer.country) LIKE LOWER(:qry) OR LOWER(customer.comments) LIKE LOWER(:qry) OR ticket_out.machine_number = :machine_number", { qry: `%${args.search}%`, machine_number: args.search });
 				}
+				// const openingStartTime = moment(loggedInUser.userLocation.opening_start_time ? loggedInUser.userLocation.opening_start_time : '10:30', 'HH:mm').tz('America/Chicago');
 				const openingStartTime = moment(loggedInUser.userLocation.opening_start_time ? loggedInUser.userLocation.opening_start_time : '10:30', 'HH:mm');
-				let startDate = moment();
-				let endDate = moment();
-				if(moment().isBefore(openingStartTime)){
+				let startDate = moment().utc();
+				let startDateChicago = moment().tz('America/Chicago');
+				let endDate = startDate;
+				if(startDateChicago.format('YYYY-MM-DD HH:mm:ss') < openingStartTime.format('YYYY-MM-DD HH:mm:ss')){
 					startDate.subtract(1, 'day');
 				}
 				startDate.set({
@@ -57,13 +60,13 @@ export class TicketoutsService{
 				});
 				endDate = moment(startDate).add(23,'hours').add(59, 'minutes');
 				if(args.start_date && args.start_date !== null && args.end_date && args.end_date !== null){
-					startDate = moment(args.start_date,'YYYY-MM-DDTHH:mm:ssZ');
+					startDate = moment(args.start_date,'YYYY-MM-DDTHH:mm:ssZ').utc();
 					startDate.set({
 						hour:  openingStartTime.get('hour'),
 						minute: openingStartTime.get('minute'),
 						second: openingStartTime.get('second'),
 					});
-					endDate = moment(args.end_date,'YYYY-MM-DDTHH:mm:ssZ').add(1,'day');
+					endDate = moment(args.end_date,'YYYY-MM-DDTHH:mm:ssZ').utc().add(1,'day');
 					endDate.set({
 						hour:  openingStartTime.get('hour'),
 						minute: openingStartTime.get('minute'),
@@ -71,9 +74,14 @@ export class TicketoutsService{
 					});
 					endDate.subtract(1,'minute');
 				}
-				resultsQuery.andWhere("ticket_out.created_at BETWEEN :startDate AND :endDate", {startDate: startDate.startOf('day').toISOString(), endDate: endDate.endOf('day').toISOString()});
+				resultsQuery.andWhere("ticket_out.created_at BETWEEN :startDate AND :endDate", {startDate: startDate.add(5,'hours').format('YYYY-MM-DD HH:mm:ss'), endDate: endDate.add(5,'hours').format('YYYY-MM-DD HH:mm:ss')});
+				resultsQuery.orderBy("ticket_out.persistable.created_at", "DESC");
 				const total = await resultsQuery.getCount();
-				const results = await resultsQuery.skip(page-1).take(limit).getMany();
+				const results = await resultsQuery.skip((page-1)*limit).take(limit).getMany();
+				// const results = await resultsQuery.orderBy('ticket_out.created_at', 'DESC').skip((page-1)*limit).take(limit).getMany();
+				if(args.export !== undefined && Number(args.export) == 1){
+					return await resultsQuery.getMany();
+				}
 				return createPaginationObject<TicketOut>(results, total, page, limit);
 			}
 		}catch(e){
@@ -94,17 +102,17 @@ export class TicketoutsService{
 			throw new ConflictException('Invalid location');	
 		}
 
-		if(isSuperRole){
-			const customerNameExists = await this.repoCustomer.findOne({where:{id: Number(recordDto.customer_id)}});
-			if (!customerNameExists) {
-				throw new ConflictException('Customer does not exists');
-			}
-		}else{
-			const customerNameExists = await this.repoCustomer.findOne({where:{id: Number(recordDto.customer_id), location: loggedInUser.userLocation}});
-			if (!customerNameExists) {
-				throw new ConflictException('Customer does not exists');
-			}
-		}
+		// if(isSuperRole){
+		// 	const customerNameExists = await this.repoCustomer.findOne({where:{id: Number(recordDto.customer_id)}});
+		// 	if (!customerNameExists) {
+		// 		throw new ConflictException('Customer does not exists');
+		// 	}
+		// }else{
+		// 	const customerNameExists = await this.repoCustomer.findOne({where:{id: Number(recordDto.customer_id), location: loggedInUser.userLocation}});
+		// 	if (!customerNameExists) {
+		// 		throw new ConflictException('Customer does not exists');
+		// 	}
+		// }
 		
 
 	    if(loggedInUser && loggedInUser.id){

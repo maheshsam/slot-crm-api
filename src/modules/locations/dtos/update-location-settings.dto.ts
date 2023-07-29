@@ -11,6 +11,11 @@ export class UpdateLocationSettingsDto {
     @IsOptional()
 	@IsString()
     match_point_restrictions_hours: string;
+
+    @ApiProperty()
+    @IsOptional()
+	@IsString()
+    opening_start_time: string;
 	
     @ApiProperty()
     @IsOptional()

@@ -8,7 +8,7 @@ import { Customer } from '../../entity/Customer';
 import { MoneyIn, MoneyInType } from 'src/entity/MoneyIn';
 import { hasSuperRole, hasPermission } from 'src/lib/misc';
 import { createPaginationObject } from 'src/lib/pagination';
-import * as moment from "moment";
+import * as moment from "moment-timezone";
 
 @Injectable()
 export class MoneyInService{
@@ -53,9 +53,10 @@ export class MoneyInService{
 					resultsQuery.andWhere("LOWER(user.full_name) LIKE LOWER(:qry) OR LOWER(user.email) LIKE LOWER(:qry) OR user.mobile LIKE LOWER(:qry) OR LOWER(money_in.comments) LIKE LOWER(:qry) OR money_in.amount = :amount", { qry: `%${args.search}%`, amount: args.search });
 				}
 				const openingStartTime = moment(loggedInUser.userLocation.opening_start_time ? loggedInUser.userLocation.opening_start_time : '10:30', 'HH:mm');
-				let startDate = moment();
-				let endDate = moment();
-				if(moment().isBefore(openingStartTime)){
+				let startDate = moment().utc();
+				let startDateChicago = moment().tz('America/Chicago');
+				let endDate = startDate;
+				if(startDateChicago.format('YYYY-MM-DD HH:mm:ss') < openingStartTime.format('YYYY-MM-DD HH:mm:ss')){
 					startDate.subtract(1, 'day');
 				}
 				startDate.set({
@@ -65,13 +66,13 @@ export class MoneyInService{
 				});
 				endDate = moment(startDate).add(23,'hours').add(59, 'minutes');
 				if(args.start_date && args.start_date !== null && args.end_date && args.end_date !== null){
-					startDate = moment(args.start_date,'YYYY-MM-DDTHH:mm:ssZ');
+					startDate = moment(args.start_date,'YYYY-MM-DDTHH:mm:ssZ').utc();
 					startDate.set({
 						hour:  openingStartTime.get('hour'),
 						minute: openingStartTime.get('minute'),
 						second: openingStartTime.get('second'),
 					});
-					endDate = moment(args.end_date,'YYYY-MM-DDTHH:mm:ssZ').add(1,'day');
+					endDate = moment(args.end_date,'YYYY-MM-DDTHH:mm:ssZ').utc().add(1,'day');
 					endDate.set({
 						hour:  openingStartTime.get('hour'),
 						minute: openingStartTime.get('minute'),
@@ -79,9 +80,10 @@ export class MoneyInService{
 					});
 					endDate.subtract(1,'minute');
 				}
-				resultsQuery.where("money_in.created_at BETWEEN :startDate AND :endDate", {startDate: moment(startDate).toISOString(), endDate: moment(endDate).toISOString()});
+				resultsQuery.andWhere("money_in.created_at BETWEEN :startDate AND :endDate", {startDate: moment(startDate).add(5,'hours').format('YYYY-MM-DD HH:mm:ss'), endDate: moment(endDate).add(5,'hours').format('YYYY-MM-DD HH:mm:ss')});
+				resultsQuery.orderBy('money_in.persistable.created_at','DESC');
 				const total = await resultsQuery.getCount();
-				const results = await resultsQuery.skip(page-1).take(limit).getMany();
+				const results = await resultsQuery.skip((page-1)*limit).take(limit).getMany();
 				return createPaginationObject<MoneyIn>(results, total, page, limit);
 			}
 		}catch(e){

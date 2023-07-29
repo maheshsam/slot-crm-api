@@ -29,6 +29,10 @@ export class GetTicketoutsDto{
 
 	@ApiProperty()
 	@IsOptional()
+	export!: boolean
+
+	@ApiProperty()
+	@IsOptional()
 	page!: number
 
 	@ApiProperty()

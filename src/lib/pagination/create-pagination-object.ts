@@ -20,14 +20,31 @@ export const createPaginationObject = <T>(
 	const totalPages = Math.ceil(totalItems / limit);
 
     const paginationNumericLinks: IPaginationLinks[] = [];
-    for(let i = 1; i <= totalPages; i++){
+    // for(let i = 1; i <= totalPages; i++){
+    //     paginationNumericLinks.push({"url":`{\/?page=${i}}`,"label":String(i),"active": currentPage == i ? true : false,"page":i});
+    // }
+
+    let paginationStartPageNumber = 1;
+    if(currentPage > 4){
+        paginationStartPageNumber = Number(currentPage) - 2;
+    }
+    let paginationEndPageNumber = totalPages;
+    if(totalPages > 4){
+        if((paginationStartPageNumber + 5) < totalPages){
+            paginationEndPageNumber = Number(paginationStartPageNumber) + 5;
+        }else{
+            paginationEndPageNumber = totalPages;
+            paginationStartPageNumber = paginationEndPageNumber - 5;
+        }
+    }
+    for(let i = paginationStartPageNumber; i <= paginationEndPageNumber; i++){
         paginationNumericLinks.push({"url":`{\/?page=${i}}`,"label":String(i),"active": currentPage == i ? true : false,"page":i});
     }
 
 	const paginationlinks: IPaginationLinks[] = [
-        {"url":"\/?page=1","label":"&laquo; Previous","active":false,"page":1},
+        {"url":"\/?page=1","label":"&laquo; First","active":false,"page":1},
         ...paginationNumericLinks,
-        {"url":`{\/?page=${totalPages}}`,"label":"Next &raquo;","active":false,"page":totalPages}
+        {"url":`{\/?page=${totalPages}}`,"label":"Last &raquo;","active":false,"page":totalPages}
     ];
 
 	const meta: IPaginationMeta = {

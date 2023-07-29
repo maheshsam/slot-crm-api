@@ -6,9 +6,9 @@ export class CreatePromotionDto {
 	@IsNumber()
 	customer_id: number
 
-	@ApiProperty()
-	@IsDefined()
-	promotion_type: any
+	// @ApiProperty()
+	// @IsDefined()
+	// promotion_type: any
 	
 	@ApiProperty()
 	@IsDefined()

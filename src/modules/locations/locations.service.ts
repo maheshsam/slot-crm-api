@@ -49,8 +49,9 @@ export class LocationsService{
 					const endDateMoment = moment(args.end_date,'YYYY-MM-DDTHH:mm:ssZ');
 					resultsQuery.andWhere("location.created_at BETWEEN :startDate AND :endDate", {startDate: startDateMoment.startOf('day').toISOString(), endDate: endDateMoment.endOf('day').toISOString()});
 				}
+				resultsQuery.orderBy('location.persistable.created_at','DESC');
 				const total = await resultsQuery.getCount();
-				const results = await resultsQuery.skip(page-1).take(limit).getMany();
+				const results = await resultsQuery.skip((page-1)*limit).take(limit).getMany();
 				return createPaginationObject<Location>(results, total, page, limit);
 			}
 		}catch(e){

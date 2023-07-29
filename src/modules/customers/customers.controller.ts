@@ -6,6 +6,8 @@ import { UpdateCustomerDto } from './dtos/update-customer.dto';
 import { GetCustomersDto } from "./dtos/get-customers.dto";
 import { HasPermissions } from '../../common/decorators/has-permissions.decorator';
 import { User } from '../../entity/User';
+import { Parser } from 'prettier';
+import { Response } from 'express';
 
 @Controller('customers')
 export class CustomersController{

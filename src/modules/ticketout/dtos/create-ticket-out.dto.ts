@@ -4,6 +4,7 @@ import { ApiProperty } from '@nestjs/swagger';
 export class CreateTickeoutDto {
 	@ApiProperty()
 	@IsNumber()
+	@IsOptional()
 	customer_id: number
 
 	@ApiProperty()
@@ -16,6 +17,7 @@ export class CreateTickeoutDto {
 
 	@ApiProperty()
 	@IsString()
+	@IsOptional()
 	ticket_out_photo: string
 
 	@IsOptional()

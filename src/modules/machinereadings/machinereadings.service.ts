@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, ConflictException, NotAcceptableException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Not, Equal, Between } from 'typeorm';
+import { Repository, Not, Equal, Between, LessThan } from 'typeorm';
 import { UpsertMachineReadingDto } from './dtos/upsert-machine-reading.dto';
 import { GetMachineReadingssDto } from './dtos/get-machine-readings.dto';
 import { MachineReading } from '../../entity/MachineReading';
@@ -21,23 +21,17 @@ export class MachineReadingsService{
 		const isSuperRole = hasSuperRole(loggedInUser);
 		let readingDate = new Date();
 		let readingDateMoment = moment(readingDate);
-		try{
-			if(Object.keys(args).length > 0){
-				const resultQuery = this.repo.createQueryBuilder("machine_reading");
-				// const resultQuery = this.repo.createQueryBuilder("machine");
-				resultQuery.leftJoinAndSelect("machine_reading","machine","machine.machine_number = machine_reading.machine_number");
-				resultQuery.leftJoinAndSelect("machine_reading.added_by", "user");
-				resultQuery.andWhere("machine_reading.locationId IS NOT NULL AND machine_reading.locationId = :locationId",{locationId: loggedInUser.userLocation ? loggedInUser.userLocation.id : 0});
-				if(args.reading_datetime !== undefined && args.reading_datetime !== null){
-					readingDateMoment = moment(args.reading_datetime,'YYYY-MM-DDTHH:mm:ssZ');
-				}
-				resultQuery.andWhere('machine_reading.reading_datetime BETWEEN :startOfDay AND :endOFDay', {startOfDay: readingDateMoment.startOf('day').toISOString(),endOFDay: readingDateMoment.endOf('day').toISOString()});		
-				return await resultQuery.getMany();
-			}
-		}catch(e){
-			console.log(e);
+		if(args.reading_datetime !== undefined && args.reading_datetime !== null){
+			readingDateMoment = moment(args.reading_datetime,'YYYY-MM-DDTHH:mm:ssZ');
 		}
-		return await this.repo.find({where: {reading_datetime: Between(readingDateMoment.startOf('day').toISOString(), readingDateMoment.endOf('day').toISOString()), location: loggedInUser.userLocation}, relations: { added_by: true }});
+		const preReadingDate = await this.repo.find({select:{ reading_datetime: true}, where: {reading_datetime: LessThan(readingDateMoment.utc().startOf('day').toISOString()), location: loggedInUser.userLocation}, order: {reading_datetime: 'DESC'}});
+		let preDateMachineReading = [];
+		if(preReadingDate && preReadingDate.length > 0){
+			const preReadingDateMoment = moment(preReadingDate[0].reading_datetime,'YYYY-MM-DD HH:mm:ss');
+			preDateMachineReading = await this.repo.find({where: {reading_datetime: Between(preReadingDateMoment.startOf('day').toISOString(),preReadingDateMoment.endOf('day').toISOString()), location: loggedInUser.userLocation}});
+		}
+		const machineReadings = await this.repo.find({where: {reading_datetime: Between(readingDateMoment.utc().startOf('day').toISOString(),readingDateMoment.utc().endOf('day').toISOString()), location: loggedInUser.userLocation}});
+		return {machineReadings,preDateMachineReading};
 	}
 
 	async upsert(args: any) {
@@ -68,7 +62,7 @@ export class MachineReadingsService{
 					monthly_hold = 0;
 				}
 				const readingData = {
-					reading_datetime: readingDateMoment.startOf('day').toISOString(), 
+					reading_datetime: readingDateMoment.startOf('day').add(1, 'minute').toISOString(), 
 					machine_number: machine.machine_number,
 					new_in: readingsBody['new_in_'+machine_number] !== undefined ? Number(readingsBody['new_in_'+machine_number]) : 0,
 					old_in: readingsBody['old_in_'+machine_number] !== undefined ? Number(readingsBody['old_in_'+machine_number]) : 0,
@@ -76,7 +70,7 @@ export class MachineReadingsService{
 					new_out: readingsBody['new_out_'+machine_number] !== undefined ? Number(readingsBody['new_out_'+machine_number]) : 0,
  					old_out: readingsBody['old_out_'+machine_number] !== undefined ? Number(readingsBody['old_out_'+machine_number]) : 0,
 					net_out: readingsBody['new_out_'+machine_number] !== undefined && readingsBody['old_out_'+machine_number] !== undefined ? readingsBody['new_out_'+machine_number] - readingsBody['old_out_'+machine_number] : 0,
-					daily_hold:  readingsBody['new_in_'+machine_number] !== undefined && readingsBody['old_in_'+machine_number] !== undefined && readingsBody['new_out_'+machine_number] !== undefined && readingsBody['old_out_'+machine_number] !== undefined ? (readingsBody['new_in_'+machine_number] - readingsBody['old_in_'+machine_number]) - (readingsBody['new_out_'+machine_number] - readingsBody['old_out_'+machine_number]) : 0,
+					daily_hold:  readingsBody['new_in_'+machine_number] !== undefined && readingsBody['old_in_'+machine_number] !== undefined && readingsBody['new_out_'+machine_number] !== undefined && readingsBody['old_out_'+machine_number] !== undefined ? Math.round((((readingsBody['new_in_'+machine_number] - readingsBody['old_in_'+machine_number]) - (readingsBody['new_out_'+machine_number] - readingsBody['old_out_'+machine_number]))/(readingsBody['new_in_'+machine_number] - readingsBody['old_in_'+machine_number]))*100) : 0,
 					monthly_hold: monthly_hold + readingsBody['new_in_'+machine_number] !== undefined && readingsBody['old_in_'+machine_number] !== undefined && readingsBody['new_out_'+machine_number] !== undefined && readingsBody['old_out_'+machine_number] !== undefined ? (readingsBody['new_in_'+machine_number] - readingsBody['old_in_'+machine_number]) - (readingsBody['new_out_'+machine_number] - readingsBody['old_out_'+machine_number]) : 0,
 					machine,
 				}

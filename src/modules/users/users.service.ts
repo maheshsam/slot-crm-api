@@ -92,8 +92,9 @@ export class UsersService {
 			//     // }))
 			// "data": ,"payload":{"pagination":{"page":2,"first_page_url":"\/?page=1","from":11,"last_page":3,"links":[{"url":"\/?page=1","label":"&laquo; Previous","active":false,"page":1},{"url":"\/?page=1","label":"1","active":false,"page":1},{"url":"\/?page=2","label":"2","active":true,"page":2},{"url":"\/?page=3","label":"3","active":false,"page":3},{"url":"\/?page=3","label":"Next &raquo;","active":false,"page":3}],"next_page_url":"\/?page=3","items_per_page":"10","prev_page_url":"\/?page=1","to":20,"total":21}}
 			    // return await usersQuery.skip(pageNumber).take(itemsPerPage).getMany();
+				usersQuery.orderBy('user.persistable.created_at','DESC');
 				const total = await usersQuery.getCount();
-				const results = await usersQuery.skip(page-1).take(limit).getMany();
+				const results = await usersQuery.skip((page-1)*limit).take(limit).getMany();
 				// return { "data": await usersQuery.skip(pageNumber-1).take(itemsPerPage).getMany(), "payload":payload};
 				return createPaginationObject<User>(results, total, page, limit);
 			}

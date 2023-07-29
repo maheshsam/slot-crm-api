@@ -52,6 +52,10 @@ export class GetMatchpointsDto{
 
 	@ApiProperty()
 	@IsOptional()
+	export!: boolean
+
+	@ApiProperty()
+	@IsOptional()
 	page!: number
 
 	@ApiProperty()
