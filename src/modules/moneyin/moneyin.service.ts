@@ -140,7 +140,12 @@ export class MoneyInService{
 		if(loggedInUser){
 			moneyIn.persistable.updated_by = loggedInUser;
 		}
+		if(recordDto.created_date !== undefined){
+			moneyIn.persistable.created_at = moment(recordDto.created_date,'YYYY-MM-DD').endOf('date').subtract(5,'minutes').toISOString();
+		}
+		delete recordDto.created_date;
 		await this.repo.update(id,recordDto);
+		await this.repo.save(moneyIn);
 		return moneyIn;
 	}
 
@@ -153,7 +158,7 @@ export class MoneyInService{
 			moneyIn = await this.repo.findOne({ where: {id: recordId}});	
 		}else{
 			if(hasPermission(loggedInUser, 'view_all_money_in')){
-				moneyIn = await this.repo.findOne({where: {id: recordId, location: loggedInUser.userLocation}, relations: {added_by: true}});
+				moneyIn = await this.repo.findOne({where: {id: recordId, location: loggedInUser.userLocation}});
 			}else{
 				moneyIn = await this.repo.findOne({where: {id: recordId, added_by: loggedInUser, location: loggedInUser.userLocation}, relations: {added_by: true}});
 			}

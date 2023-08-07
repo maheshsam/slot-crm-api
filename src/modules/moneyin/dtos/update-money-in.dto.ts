@@ -8,6 +8,10 @@ export class UpdateMoneyDto {
 
 	@ApiProperty()
 	@IsOptional()
+	created_date!: string
+
+	@ApiProperty()
+	@IsOptional()
 	@IsString()
 	comments: string
 
