@@ -221,11 +221,19 @@ export class UsersService {
 		// await this.repoUser.save(user);
 		if(body.device_lock){
 			user.device_lock = body.device_lock;
-			if(body.device_details && body.device_details !== ""){
-				user.device_details = body.device_details;
-			}else{
-				user.device_details = getmac.default();
+			// if(body.device_details && body.device_details !== ""){
+			// 	user.device_details = body.device_details;
+			// }else{
+			if(body.lock_this_device){
+				if(user.device_details){
+					if(!user.device_details.includes(getmac.default())){
+						user.device_details = user.device_details +'|'+ getmac.default();
+					}
+				}else{
+					user.device_details = getmac.default();
+				}
 			}
+			// }
 		}else{
 			user.device_lock = body.device_lock
 		}

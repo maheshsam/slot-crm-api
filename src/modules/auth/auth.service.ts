@@ -32,7 +32,7 @@ export class AuthService {
 		}
 
 		if(user.device_lock){
-			if(user.device_details != getmac.default()){
+			if(user.device_details && !user.device_details.includes(getmac.default())){
 				throw new ForbiddenException('Not allowed to login from this device');
 			}
 		}

@@ -76,6 +76,10 @@ export class UpdateUserDto{
 
     @ApiProperty()
     @IsOptional()
+    lock_this_device: boolean
+
+    @ApiProperty()
+    @IsOptional()
     device_details: string
 
     @ApiProperty()
