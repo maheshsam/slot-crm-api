@@ -517,30 +517,43 @@ export class ReportsService{
 		// let startDate = moment().tz('America/Chicago');
 		// let endDate = moment().tz('America/Chicago');
 
-		const openingStartTime = moment(loggedInUser.userLocation.opening_start_time ? loggedInUser.userLocation.opening_start_time : '10:30', 'HH:mm');
-		let startDate = moment().utc();
-		let startDateChicago = moment().tz('America/Chicago');
-		let endDate = startDate;
-		if(startDateChicago.format('YYYY-MM-DD HH:mm:ss') <= openingStartTime.format('YYYY-MM-DD HH:mm:ss')){
-			startDate.subtract(1, 'day');
-		}
-		startDate.set({
-			hour:  openingStartTime.get('hour'),
-			minute: openingStartTime.get('minute'),
-			second: openingStartTime.get('second'),
-		});
-		endDate = moment(endDate).add(1,'day');
-		endDate.set({
-			hour:  openingStartTime.get('hour'),
-			minute: openingStartTime.get('minute'),
-			second: openingStartTime.get('second'),
-		});
-		endDate = moment(endDate).subtract(1,'minute');
+		const openingStartTime = loggedInUser.userLocation.opening_start_time ? loggedInUser.userLocation.opening_start_time : '10:30';
+		const openingStartTimeSplit = openingStartTime.split(":");
+
+		const now = moment().tz('America/Chicago');
+		const startOfToday = now.clone().startOf('day').hour(parseInt(openingStartTimeSplit[0])).minute(openingStartTimeSplit.length > 0 ? parseInt(openingStartTimeSplit[1]) : 0);
+		const endOfTomorrow = startOfToday.clone().add(1, 'day').subtract(1,'minute'); // 7:59 AM CST of next day
+
+		// Format the time range to UTC for querying the database
+		const startUtc = startOfToday.clone().utc().format('YYYY-MM-DD HH:mm:ss');
+		const endUtc = endOfTomorrow.clone().utc().format('YYYY-MM-DD HH:mm:ss');
+
+
+		// const openingStartTime = moment(loggedInUser.userLocation.opening_start_time ? loggedInUser.userLocation.opening_start_time : '10:30', 'HH:mm');
+		// let startDate = moment().utc();
+		// let startDateChicago = moment().tz('America/Chicago');
+		// let endDate = startDate;
+		// if(startDateChicago.format('YYYY-MM-DD HH:mm:ss') <= openingStartTime.format('YYYY-MM-DD HH:mm:ss')){
+		// 	startDate.subtract(1, 'day');
+		// }
+		// startDate.set({
+		// 	hour:  openingStartTime.get('hour'),
+		// 	minute: openingStartTime.get('minute'),
+		// 	second: openingStartTime.get('second'),
+		// });
+		// endDate = moment(endDate).add(1,'day');
+		// endDate.set({
+		// 	hour:  openingStartTime.get('hour'),
+		// 	minute: openingStartTime.get('minute'),
+		// 	second: openingStartTime.get('second'),
+		// });
+		// endDate = moment(endDate).subtract(1,'minute');
 
 		const moneyInQuery = this.repoMoneyIn.createQueryBuilder("money_in");
 		moneyInQuery.select(['money_in.money_in_type', 'money_in.amount']);
 		moneyInQuery.andWhere("money_in.locationId IS NOT NULL AND money_in.locationId = :locationId",{locationId: loggedInUser.userLocation ? loggedInUser.userLocation.id : 0});
-		moneyInQuery.andWhere("money_in.created_at BETWEEN :startDate AND :endDate", {startDate: moment(startDate).add(5,'hours').format('YYYY-MM-DD HH:mm:ss'), endDate: moment(endDate).add(5,'hours').format('YYYY-MM-DD HH:mm:ss')});
+		// moneyInQuery.andWhere("money_in.created_at BETWEEN :startDate AND :endDate", {startDate: moment(startDate).add(5,'hours').format('YYYY-MM-DD HH:mm:ss'), endDate: moment(endDate).add(5,'hours').format('YYYY-MM-DD HH:mm:ss')});
+		moneyInQuery.andWhere("money_in.created_at BETWEEN :startDate AND :endDate", {startDate: startUtc, endDate: endUtc});
 		const moneyIn = await moneyInQuery.getMany();
 		let moneyInTotal: number = 0;
 		if(moneyIn){
@@ -552,7 +565,8 @@ export class ReportsService{
 		const moneyOutQuery = this.repoMoneyOut.createQueryBuilder("money_out");
 		moneyOutQuery.select(['money_out.money_out_type', 'money_out.sub_type', 'money_out.amount']);
 		moneyOutQuery.andWhere("money_out.locationId IS NOT NULL AND money_out.locationId = :locationId",{locationId: loggedInUser.userLocation ? loggedInUser.userLocation.id : 0});
-		moneyOutQuery.andWhere("money_out.created_at BETWEEN :startDate AND :endDate", {startDate: moment(startDate).add(5,'hours').format('YYYY-MM-DD HH:mm:ss'), endDate: moment(endDate).add(5,'hours').format('YYYY-MM-DD HH:mm:ss')});
+		// moneyOutQuery.andWhere("money_out.created_at BETWEEN :startDate AND :endDate", {startDate: moment(startDate).add(5,'hours').format('YYYY-MM-DD HH:mm:ss'), endDate: moment(endDate).add(5,'hours').format('YYYY-MM-DD HH:mm:ss')});
+		moneyOutQuery.andWhere("money_out.created_at BETWEEN :startDate AND :endDate", {startDate: startUtc, endDate: endUtc});
 		const moneyOut = await moneyOutQuery.getMany();
 		let moneyOutTotal: number = 0;
 		let bonusTotal: number = 0;
@@ -572,7 +586,7 @@ export class ReportsService{
 		promotionsQuery.select(['promotion.promotion_type','promotion.prize_type','promotion.prize_details'])
 		promotionsQuery.andWhere("promotion.prize_type = 'CASH'");
 		promotionsQuery.andWhere("promotion.locationId IS NOT NULL AND promotion.locationId = :locationId",{locationId: loggedInUser.userLocation ? loggedInUser.userLocation.id : 0});
-		promotionsQuery.andWhere("promotion.created_at BETWEEN :startDate AND :endDate", {startDate: moment(startDate).add(5,'hours').format('YYYY-MM-DD HH:mm:ss'), endDate: moment(endDate).add(5,'hours').format('YYYY-MM-DD HH:mm:ss')});
+		promotionsQuery.andWhere("promotion.created_at BETWEEN :startDate AND :endDate", {startDate: startUtc, endDate: endUtc});
 		const promotions = await promotionsQuery.getMany();
 		let promotionsTotal: number = 0;
 		if(promotions){
@@ -584,7 +598,7 @@ export class ReportsService{
 		const totalMatchPointsQuery = this.repoMatchPoint.createQueryBuilder("match_point");
 		totalMatchPointsQuery.leftJoinAndSelect("match_point.customer", "customer");
 		totalMatchPointsQuery.andWhere("match_point.locationId IS NOT NULL AND match_point.locationId = :locationId",{locationId: loggedInUser.userLocation ? loggedInUser.userLocation.id : 0});
-		totalMatchPointsQuery.andWhere("match_point.check_in_datetime BETWEEN :startDate AND :endDate", {startDate: moment(startDate).add(5,'hours').format('YYYY-MM-DD HH:mm:ss'), endDate: moment(endDate).add(5,'hours').format('YYYY-MM-DD HH:mm:ss')});
+		totalMatchPointsQuery.andWhere("match_point.check_in_datetime BETWEEN :startDate AND :endDate", {startDate: startUtc, endDate: endUtc});
 		// if(hasRole(loggedInUser,'Employee')){
 		// 	totalMatchPointsQuery.andWhere("match_point.addedById = :userid",{userid: loggedInUser.id});
 		// }
@@ -604,14 +618,16 @@ export class ReportsService{
 		// totalTicketOutQuery.leftJoinAndSelect("machine","machine","machine.machine_number = ticket_out.machine_number");
 		totalTicketOutQuery.select(['ticket_out.ticket_out_points'])
 		totalTicketOutQuery.andWhere("ticket_out.locationId IS NOT NULL AND ticket_out.locationId = :locationId",{locationId: loggedInUser.userLocation ? loggedInUser.userLocation.id : 0});
-		totalTicketOutQuery.andWhere("ticket_out.created_at BETWEEN :startDate AND :endDate", {startDate: startDate.add(5,'hours').format('YYYY-MM-DD HH:mm:ss'), endDate: endDate.add(5,'hours').format('YYYY-MM-DD HH:mm:ss')});
+		totalTicketOutQuery.andWhere("ticket_out.created_at BETWEEN :startDate AND :endDate", {startDate: startUtc, endDate: endUtc});
 		// if(hasRole(loggedInUser,'Employee')){
 		// 	totalTicketOutQuery.andWhere("ticket_out.addedById = :userid",{userid: loggedInUser.id});
 		// }
 		const totalTicketOutsRes = await totalTicketOutQuery.getRawMany();
 		let totalTicketOutsSum: number = 0;
+		let totalTicketOutsCount: number = 0;
 		if(totalTicketOutsRes){
 			totalTicketOutsRes.forEach((item) => {
+				totalTicketOutsCount = totalTicketOutsCount + 1;
 				totalTicketOutsSum += Number(item.ticket_out_ticket_out_points);
 			})
 		}
@@ -619,7 +635,7 @@ export class ReportsService{
 		const totalMachineReadingInQuery = this.repoMachineReading.createQueryBuilder("machine_reading");
 		totalMachineReadingInQuery.select(['machine_reading.net_in','machine_reading.net_out'])
 		totalMachineReadingInQuery.andWhere("machine_reading.locationId IS NOT NULL AND machine_reading.locationId = :locationId",{locationId: loggedInUser.userLocation ? loggedInUser.userLocation.id : 0});
-		totalMachineReadingInQuery.andWhere("machine_reading.reading_datetime BETWEEN :startDate AND :endDate", {startDate: moment(startDate).add(5,'hours').format('YYYY-MM-DD HH:mm:ss'), endDate: moment(endDate).add(5,'hours').format('YYYY-MM-DD HH:mm:ss')});
+		totalMachineReadingInQuery.andWhere("machine_reading.reading_datetime BETWEEN :startDate AND :endDate", {startDate: startUtc, endDate: endUtc});
 		const totalMachineReadingIn = await totalMachineReadingInQuery.getMany();
 
 		let totalMachineReadingInSum = 0;
@@ -631,7 +647,7 @@ export class ReportsService{
 			})
 		}
 				
-		return {total_checked_in: totalCheckedIn, total_match_points: totalMatchPointsSum, total_ticket_outs: totalTicketOutsSum, total_net_in_machine_reading: totalMachineReadingInSum, total_money_in: moneyInTotal, total_money_out: moneyOutTotal + promotionsTotal + totalMatchPointsSum + totalTicketOutsSum };
+		return {total_checked_in: totalCheckedIn, total_match_points: totalMatchPointsSum, total_ticket_outs_count: totalTicketOutsCount, total_ticket_outs: totalTicketOutsSum, total_net_in_machine_reading: totalMachineReadingInSum, total_money_in: moneyInTotal, total_money_out: moneyOutTotal + promotionsTotal + totalMatchPointsSum + totalTicketOutsSum };
 	}
 	
 }
