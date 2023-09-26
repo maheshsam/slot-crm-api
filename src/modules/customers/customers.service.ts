@@ -33,7 +33,7 @@ export class CustomersService{
 		}
 		if(args.phone && args.phone != undefined){
 			if(isSuperRole){
-				return await this.repo.findOne({where: {phone: Number(args.phone)}});
+				return await this.repo.findOne({where: {phone: Number(args.phone), location: loggedInUser.userLocation}});
 			}else{
 				return await this.repo.findOne({where: {phone: args.phone, location: loggedInUser.userLocation}});
 			}
@@ -98,7 +98,7 @@ export class CustomersService{
 		if(loggedInUser.userLocation == null){
 			throw new ConflictException('Invalid location');	
 		}
-		const customerNameExists = await this.repo.findOne({where:{phone: Number(customerDto.phone)}});
+		const customerNameExists = await this.repo.findOne({where:{phone: Number(customerDto.phone), location: loggedInUser.userLocation}});
 	    if (customerNameExists) {
 	      throw new ConflictException('Customer with given phone already exists');
 	    }
@@ -124,7 +124,7 @@ export class CustomersService{
 		// const isSuperRole = hasSuperRole(loggedInUser);
 		const customerDto: UpdateCustomerDto = args.body;
 		const customerId: number = args.customerId;
-		const customerNameExists = await this.repo.findOne({where:{phone: customerDto.phone, id: Not(Equal(customerId))}});
+		const customerNameExists = await this.repo.findOne({where:{phone: customerDto.phone, id: Not(Equal(customerId)),location: loggedInUser.location}});
 	    if (customerNameExists) {
 	      throw new ConflictException('Customer with given phone number already exists');
 	    }
