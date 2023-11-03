@@ -22,7 +22,7 @@ export class CustomersService{
 		const limit = Number(args.items_per_page) || 100000;
 		if(args.customer_id && args.customer_id != undefined){
 			if(isSuperRole){
-				return await this.repo.findOne({where: {id: args.customer_id}, relations: { added_by: true }});
+				return await this.repo.findOne({where: {id: args.customer_id, location: loggedInUser.userLocation}, relations: { added_by: true }});
 			}else{
 				if(hasPermission(loggedInUser,'view_all_money_in')){
 					return await this.repo.findOne({where: {id: args.customer_id, location: loggedInUser.userLocation}, relations: { added_by: true }});
@@ -42,13 +42,13 @@ export class CustomersService{
 			if(Object.keys(args).length > 0){
 				const customersQuery = this.repo.createQueryBuilder("customer");
 				customersQuery.leftJoinAndSelect("customer.added_by", "user");
-				if(!isSuperRole){
+				// if(!isSuperRole){
 					// if(hasPermission(loggedInUser,'view_all_money_in')){
 						customersQuery.andWhere("customer.locationId IS NOT NULL AND customer.locationId = :locationId",{locationId: loggedInUser.userLocation ? loggedInUser.userLocation.id : 0});
 					// }else{
 						// customersQuery.andWhere("customer.locationId IS NOT NULL AND customer.locationId = :locationId AND customer.addedById = :addedById",{locationId: loggedInUser.userLocation ? loggedInUser.userLocation.id : 0, addedById: Number(loggedInUser.id)});
 					// }
-				}
+				// }
 				if(args.search && args.search != ""){
 					customersQuery.andWhere("LOWER(customer.first_name) LIKE LOWER(:qry) OR LOWER(customer.last_name) LIKE LOWER(:qry) OR customer.phone LIKE LOWER(:qry) OR customer.dob LIKE LOWER(:qry) OR customer.driving_license LIKE LOWER(:qry) OR LOWER(customer.city) LIKE LOWER(:qry) OR LOWER(customer.state) LIKE LOWER(:qry) OR LOWER(customer.country) LIKE LOWER(:qry) OR LOWER(customer.comments) LIKE LOWER(:qry)", { qry: `%${args.search}%` });
 				}
@@ -81,7 +81,7 @@ export class CustomersService{
 			console.log(e);
 		}
 		if(isSuperRole){
-			return await createPaginationObject<Customer>(await this.repo.find({relations: { added_by: true }}), await this.repo.count(), page, limit);
+			return await createPaginationObject<Customer>(await this.repo.find({where: {location: loggedInUser.userLocation}, relations: { added_by: true }}), await this.repo.count(), page, limit);
 		}else{
 			if(hasPermission(loggedInUser,'view_all_money_in')){
 				return await createPaginationObject<Customer>(await this.repo.find({where: {location: loggedInUser.userLocation}, relations: { added_by: true }}), await this.repo.count(), page, limit);
