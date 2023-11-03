@@ -100,22 +100,22 @@ export class CustomersService{
 		}
 		const customerNameExists = await this.repo.findOne({where:{phone: Number(customerDto.phone), location: loggedInUser.userLocation}});
 	    if (customerNameExists) {
-	      throw new ConflictException('Customer with given phone already exists');
-	    }
-
-	    const phone_otp = Math.floor(1000 + Math.random() * 9000);
-	    customerDto.phone_otp = phone_otp;
-		if(loggedInUser && loggedInUser.id){
-	    	customerDto.added_by = loggedInUser;
-			customerDto.location = loggedInUser.userLocation;
-			const customer = this.repo.create(customerDto);
-			await this.repo.save(customer);
-			if(args.loggedInUser){
-				customer.persistable.created_by = args.loggedInUser;
+	      	throw new ConflictException('Customer with given phone already exists');
+	    }else{
+			const phone_otp = Math.floor(1000 + Math.random() * 9000);
+			customerDto.phone_otp = phone_otp;
+			if(loggedInUser && loggedInUser.id){
+				customerDto.added_by = loggedInUser;
+				customerDto.location = loggedInUser.userLocation;
+				const customer = this.repo.create(customerDto);
+				await this.repo.save(customer);
+				if(args.loggedInUser){
+					customer.persistable.created_by = args.loggedInUser;
+				}
+				return this.repo.save(customer);
+			}else{
+				throw new NotAcceptableException('Invalid user details');	
 			}
-			return this.repo.save(customer);
-		}else{
-			throw new NotAcceptableException('Invalid user details');	
 		}
 	}
 
