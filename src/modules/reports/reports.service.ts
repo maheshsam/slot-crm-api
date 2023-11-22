@@ -519,8 +519,15 @@ export class ReportsService{
 
 		const openingStartTime = loggedInUser.userLocation.opening_start_time ? loggedInUser.userLocation.opening_start_time : '10:30';
 		const openingStartTimeSplit = openingStartTime.split(":");
+		const openingStartTimeMoment = moment(loggedInUser.userLocation.opening_start_time ? loggedInUser.userLocation.opening_start_time : '10:30', 'HH:mm').tz('America/Chicago');
 
-		const now = moment().tz('America/Chicago');
+		const currTime = moment().tz('America/Chicago');
+		// const format = 'hh:mm';
+		// const beforeTime = moment(openingStartTimeSplit[0]+":"+ openingStartTimeSplit.length > 0 ? parseInt(openingStartTimeSplit[1]) : 0, format);
+		let now = moment().tz('America/Chicago');
+		if(currTime.isBefore(openingStartTimeMoment)){
+			now = now.subtract(1,'day');
+		}
 		const startOfToday = now.clone().startOf('day').hour(parseInt(openingStartTimeSplit[0])).minute(openingStartTimeSplit.length > 0 ? parseInt(openingStartTimeSplit[1]) : 0);
 		const endOfTomorrow = startOfToday.clone().add(1, 'day').subtract(1,'minute'); // 7:59 AM CST of next day
 
