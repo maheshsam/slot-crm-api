@@ -44,7 +44,7 @@ export class CustomersService{
 				customersQuery.leftJoinAndSelect("customer.added_by", "user");
 				// if(!isSuperRole){
 					// if(hasPermission(loggedInUser,'view_all_money_in')){
-						customersQuery.andWhere("customer.locationId IS NOT NULL AND customer.locationId = :locationId",{locationId: loggedInUser.userLocation ? loggedInUser.userLocation.id : 0});
+						customersQuery.andWhere("customer.locationId = :locationId",{locationId: loggedInUser.userLocation ? loggedInUser.userLocation.id : 0});
 					// }else{
 						// customersQuery.andWhere("customer.locationId IS NOT NULL AND customer.locationId = :locationId AND customer.addedById = :addedById",{locationId: loggedInUser.userLocation ? loggedInUser.userLocation.id : 0, addedById: Number(loggedInUser.id)});
 					// }
