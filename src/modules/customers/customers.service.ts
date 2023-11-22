@@ -124,7 +124,7 @@ export class CustomersService{
 		// const isSuperRole = hasSuperRole(loggedInUser);
 		const customerDto: UpdateCustomerDto = args.body;
 		const customerId: number = args.customerId;
-		const customerNameExists = await this.repo.findOne({where:{phone: customerDto.phone, id: Not(Equal(customerId)),location: loggedInUser.location}});
+		const customerNameExists = await this.repo.findOne({where:{phone: customerDto.phone, id: Not(Equal(customerId)),location: loggedInUser.userLocation}});
 	    if (customerNameExists) {
 	      throw new ConflictException('Customer with given phone number already exists');
 	    }
