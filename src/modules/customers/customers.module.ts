@@ -5,9 +5,10 @@ import { CustomersService } from './customers.service';
 import { Customer } from '../../entity/Customer';
 import { User } from '../../entity/User';
 import { MatchPoint } from 'src/entity/MatchPoint';
+import { TicketOut } from 'src/entity/TicketOut';
 
 @Module({
-	imports: [TypeOrmModule.forFeature([Customer,User,MatchPoint])],
+	imports: [TypeOrmModule.forFeature([Customer,User,MatchPoint,TicketOut])],
 	controllers: [CustomersController],
 	providers: [CustomersService]
 })
