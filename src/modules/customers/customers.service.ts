@@ -272,52 +272,52 @@ export class CustomersService{
 		// 	// console.log("cust photo",cust.photo);
 		// });
 
-		const matchpoints = await this.repoMatchPoints.find({where: {check_in_photo: Like("data:image%")}, take: 2500});
-		// const matchpoints = await this.repoMatchPoints.find();
-		await matchpoints.map(async (matchpoint) => {
-			console.log("cchephoto",matchpoint.check_in_photo.substring(0,20));
-			const checkinphoto = matchpoint.check_in_photo;
-			if(checkinphoto.includes('data:image')){
-				console.log("yes in")
-				try{
-					const s3Client = new S3Client({
-						forcePathStyle: false, // Configures to use subdomain/virtual calling format.
-						endpoint: "https://sfo3.digitaloceanspaces.com",
-						region: "sfo3",
-						credentials: {
-						accessKeyId: this.configService.get('DO_SPACES_KEY'),
-						secretAccessKey: this.configService.get('DO_SPACES_SECRET')
-						}
-					});
+		// const matchpoints = await this.repoMatchPoints.find({where: {check_in_photo: Like("data:image%")}, take: 2500});
+		// // const matchpoints = await this.repoMatchPoints.find();
+		// await matchpoints.map(async (matchpoint) => {
+		// 	console.log("cchephoto",matchpoint.check_in_photo.substring(0,20));
+		// 	const checkinphoto = matchpoint.check_in_photo;
+		// 	if(checkinphoto.includes('data:image')){
+		// 		console.log("yes in")
+		// 		try{
+		// 			const s3Client = new S3Client({
+		// 				forcePathStyle: false, // Configures to use subdomain/virtual calling format.
+		// 				endpoint: "https://sfo3.digitaloceanspaces.com",
+		// 				region: "sfo3",
+		// 				credentials: {
+		// 				accessKeyId: this.configService.get('DO_SPACES_KEY'),
+		// 				secretAccessKey: this.configService.get('DO_SPACES_SECRET')
+		// 				}
+		// 			});
 		
-					let base64Content = matchpoint.check_in_photo;
-					const buf = Buffer.from(base64Content.replace(/^data:image\/\w+;base64,/, ""), 'base64');
+		// 			let base64Content = matchpoint.check_in_photo;
+		// 			const buf = Buffer.from(base64Content.replace(/^data:image\/\w+;base64,/, ""), 'base64');
 					
-					const currTime = new Date().getTime();
-					const spaceFileKey = "ezgfiles/matchpoint/"+matchpoint.id+"_"+currTime+".jpg";
-					const params = {
-						Bucket: "customerphotos", 
-						Key: spaceFileKey, 
-						Body: buf,
-						ContentEncoding: 'base64',
-						ContentType: 'image/jpeg',
-						ACL: 'public-read'
-					};
-					//@ts-ignore
-					const uploadPhoto = await s3Client.send(new PutObjectCommand(params));
-					// cust.photo = this.configService.get('DO_SPACES_CUSTOMER_PHOTOS_PATH') + spaceFileKey;
-					const filePath = this.configService.get('DO_SPACES_CUSTOMER_PHOTOS_PATH') + spaceFileKey;
-					console.log("filePath",filePath);
-					matchpoint.check_in_photo = filePath;
-					await this.repoMatchPoints.save(matchpoint);
-				}catch(err){
-					console.log("err",err);
-				}
-			}
-			console.log("after photo",matchpoint.check_in_photo);
-		});
+		// 			const currTime = new Date().getTime();
+		// 			const spaceFileKey = "ezgfiles/matchpoint/"+matchpoint.id+"_"+currTime+".jpg";
+		// 			const params = {
+		// 				Bucket: "customerphotos", 
+		// 				Key: spaceFileKey, 
+		// 				Body: buf,
+		// 				ContentEncoding: 'base64',
+		// 				ContentType: 'image/jpeg',
+		// 				ACL: 'public-read'
+		// 			};
+		// 			//@ts-ignore
+		// 			const uploadPhoto = await s3Client.send(new PutObjectCommand(params));
+		// 			// cust.photo = this.configService.get('DO_SPACES_CUSTOMER_PHOTOS_PATH') + spaceFileKey;
+		// 			const filePath = this.configService.get('DO_SPACES_CUSTOMER_PHOTOS_PATH') + spaceFileKey;
+		// 			console.log("filePath",filePath);
+		// 			matchpoint.check_in_photo = filePath;
+		// 			await this.repoMatchPoints.save(matchpoint);
+		// 		}catch(err){
+		// 			console.log("err",err);
+		// 		}
+		// 	}
+		// 	console.log("after photo",matchpoint.check_in_photo);
+		// });
 
-		return matchpoints;
+		// return matchpoints;
 
 		// const tickeouts = await this.repoTicketOut.find({where: {ticket_out_photo: Like("data:image%")}, take: 2500});
 		// await tickeouts.map(async (record) => {
