@@ -514,26 +514,43 @@ export class ReportsService{
 
 	async dashboardReport(loggedInUser: User){
 		const isSuperRole = hasSuperRole(loggedInUser);
-		// let startDate = moment().tz('America/Chicago');
-		// let endDate = moment().tz('America/Chicago');
+		
+		// const openingStartTime = loggedInUser.userLocation.opening_start_time ? loggedInUser.userLocation.opening_start_time : '10:30';
+		// const openingStartTimeSplit = openingStartTime.split(":");
+		// const openingStartTimeMoment = moment(loggedInUser.userLocation.opening_start_time ? loggedInUser.userLocation.opening_start_time : '10:30', 'HH:mm').tz('America/Chicago');
 
-		const openingStartTime = loggedInUser.userLocation.opening_start_time ? loggedInUser.userLocation.opening_start_time : '10:30';
-		const openingStartTimeSplit = openingStartTime.split(":");
-		const openingStartTimeMoment = moment(loggedInUser.userLocation.opening_start_time ? loggedInUser.userLocation.opening_start_time : '10:30', 'HH:mm').tz('America/Chicago');
+		// const currTime = moment().tz('America/Chicago');
+		// let now = moment().tz('America/Chicago');
+		// if(currTime.isBefore(openingStartTimeMoment)){
+		// 	now = now.subtract(1,'day');
+		// }
+		// const startOfToday = now.clone().startOf('day').hour(parseInt(openingStartTimeSplit[0])).minute(openingStartTimeSplit.length > 0 ? parseInt(openingStartTimeSplit[1]) : 0);
+		// const endOfTomorrow = startOfToday.clone().add(1, 'day').subtract(1,'minute'); // 7:59 AM CST of next day
 
-		const currTime = moment().tz('America/Chicago');
-		// const format = 'hh:mm';
-		// const beforeTime = moment(openingStartTimeSplit[0]+":"+ openingStartTimeSplit.length > 0 ? parseInt(openingStartTimeSplit[1]) : 0, format);
-		let now = moment().tz('America/Chicago');
-		if(currTime.isBefore(openingStartTimeMoment)){
-			now = now.subtract(1,'day');
+		
+		// const startUtc = startOfToday.clone().utc().format('YYYY-MM-DD HH:mm:ss');
+		// const endUtc = endOfTomorrow.clone().utc().format('YYYY-MM-DD HH:mm:ss');
+
+
+
+
+		const openingStartTime = moment(loggedInUser.userLocation.opening_start_time ? loggedInUser.userLocation.opening_start_time : '10:30', 'HH:mm');
+		let startDate = moment().utc();
+		let startDateChicago = moment().tz('America/Chicago');
+		let endDate = startDate;
+		if(startDateChicago.format('YYYY-MM-DD HH:mm:ss') < openingStartTime.format('YYYY-MM-DD HH:mm:ss')){
+			startDate.subtract(1, 'day');
 		}
-		const startOfToday = now.clone().startOf('day').hour(parseInt(openingStartTimeSplit[0])).minute(openingStartTimeSplit.length > 0 ? parseInt(openingStartTimeSplit[1]) : 0);
-		const endOfTomorrow = startOfToday.clone().add(1, 'day').subtract(1,'minute'); // 7:59 AM CST of next day
+		startDate.set({
+			hour:  openingStartTime.get('hour'),
+			minute: openingStartTime.get('minute'),
+			second: openingStartTime.get('second'),
+		});
+		endDate = moment(startDate).add(23,'hours').add(59, 'minutes');
 
-		// Format the time range to UTC for querying the database
-		const startUtc = startOfToday.clone().utc().format('YYYY-MM-DD HH:mm:ss');
-		const endUtc = endOfTomorrow.clone().utc().format('YYYY-MM-DD HH:mm:ss');
+		const startUtc = moment(startDate).add(5,'hours').format('YYYY-MM-DD HH:mm:ss');
+		const endUtc = moment(endDate).add(5,'hours').format('YYYY-MM-DD HH:mm:ss');
+
 
 
 		// const openingStartTime = moment(loggedInUser.userLocation.opening_start_time ? loggedInUser.userLocation.opening_start_time : '10:30', 'HH:mm');
