@@ -355,7 +355,7 @@ export class CustomersService{
 					const filePath = this.configService.get('DO_SPACES_CUSTOMER_PHOTOS_PATH') + spaceFileKey;
 					console.log("filePath",filePath);
 					record.ticket_out_photo = filePath;
-					await this.repoMatchPoints.save(record);
+					await this.repoTicketOut.save(record);
 				}catch(err){
 					console.log("err",err);
 				}
