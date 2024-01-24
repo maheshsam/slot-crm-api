@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, ConflictException, NotAcceptableException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Not, Equal, IsNull } from 'typeorm';
+import { Repository, Not, Equal, IsNull, Like } from 'typeorm';
 import { CreateCustomerDto } from './dtos/create-customer.dto';
 import { UpdateCustomerDto } from './dtos/update-customer.dto';
 import { GetCustomersDto } from './dtos/get-customers.dto';
@@ -177,32 +177,35 @@ export class CustomersService{
 		if(loggedInUser){
 			customer.persistable.updated_by = loggedInUser;
 		}
-		const s3Client = new S3Client({
-			forcePathStyle: false, // Configures to use subdomain/virtual calling format.
-			endpoint: "https://sfo3.digitaloceanspaces.com",
-			region: "sfo3",
-			credentials: {
-			  accessKeyId: this.configService.get('DO_SPACES_KEY'),
-			  secretAccessKey: this.configService.get('DO_SPACES_SECRET')
-			}
-		});
 
-		let base64Content = customerDto.photo;
-		const buf = Buffer.from(base64Content.replace(/^data:image\/\w+;base64,/, ""), 'base64');
-		
-		const currTime = new Date().getTime();
-		const spaceFileKey = "ezgfiles/customerphotos/"+customerDto.phone+"_"+currTime+".jpg";
-		const params = {
-			Bucket: "customerphotos", 
-			Key: spaceFileKey, 
-			Body: buf,
-			ContentEncoding: 'base64',
-			ContentType: 'image/jpeg',
-			ACL: 'public-read'
-		};
-		//@ts-ignore
-		const uploadPhoto = await s3Client.send(new PutObjectCommand(params));
-		customerDto.photo = this.configService.get('DO_SPACES_CUSTOMER_PHOTOS_PATH') + spaceFileKey;
+		if(customerDto.photo.includes('data:image')){
+			const s3Client = new S3Client({
+				forcePathStyle: false, // Configures to use subdomain/virtual calling format.
+				endpoint: "https://sfo3.digitaloceanspaces.com",
+				region: "sfo3",
+				credentials: {
+				  accessKeyId: this.configService.get('DO_SPACES_KEY'),
+				  secretAccessKey: this.configService.get('DO_SPACES_SECRET')
+				}
+			});
+	
+			let base64Content = customerDto.photo;
+			const buf = Buffer.from(base64Content.replace(/^data:image\/\w+;base64,/, ""), 'base64');
+			
+			const currTime = new Date().getTime();
+			const spaceFileKey = "ezgfiles/customerphotos/"+customerDto.phone+"_"+currTime+".jpg";
+			const params = {
+				Bucket: "customerphotos", 
+				Key: spaceFileKey, 
+				Body: buf,
+				ContentEncoding: 'base64',
+				ContentType: 'image/jpeg',
+				ACL: 'public-read'
+			};
+			//@ts-ignore
+			const uploadPhoto = await s3Client.send(new PutObjectCommand(params));
+			customerDto.photo = this.configService.get('DO_SPACES_CUSTOMER_PHOTOS_PATH') + spaceFileKey;
+		}
 
 		await this.repo.update(customerId,customerDto);
 		return customer;
@@ -230,46 +233,9 @@ export class CustomersService{
 	}
 
 	async replacePhotos(args: any) {
-		// const customers = await this.repo.find();
-		// await customers.map(async (cust) => {
-		// 	if(cust.photo.includes('data:image')){
-		// 		const s3Client = new S3Client({
-		// 			forcePathStyle: false, // Configures to use subdomain/virtual calling format.
-		// 			endpoint: "https://sfo3.digitaloceanspaces.com",
-		// 			region: "sfo3",
-		// 			credentials: {
-		// 			  accessKeyId: this.configService.get('DO_SPACES_KEY'),
-		// 			  secretAccessKey: this.configService.get('DO_SPACES_SECRET')
-		// 			}
-		// 		});
-	
-		// 		let base64Content = cust.photo;
-		// 		const buf = Buffer.from(base64Content.replace(/^data:image\/\w+;base64,/, ""), 'base64');
-				
-		// 		const currTime = new Date().getTime();
-		// 		const spaceFileKey = "ezgfiles/customerphotos/"+cust.phone+"_"+currTime+".jpg";
-		// 		const params = {
-		// 			Bucket: "customerphotos", 
-		// 			Key: spaceFileKey, 
-		// 			Body: buf,
-		// 			ContentEncoding: 'base64',
-		// 			ContentType: 'image/jpeg',
-		// 			ACL: 'public-read'
-		// 		};
-		// 		//@ts-ignore
-		// 		const uploadPhoto = await s3Client.send(new PutObjectCommand(params));
-		// 		// cust.photo = this.configService.get('DO_SPACES_CUSTOMER_PHOTOS_PATH') + spaceFileKey;
-		// 		cust.photo = this.configService.get('DO_SPACES_CUSTOMER_PHOTOS_PATH') + spaceFileKey;
-		// 		await this.repo.save(cust);
-		// 	}
-		// 	// console.log("cust photo",cust.photo);
-		// });
-
-		const matchpoints = await this.repoMatchPoints.find({where: {check_in_photo: Not('')}, take: 20000000});
-		// const matchpoints = await this.repoMatchPoints.find();
-		await matchpoints.map(async (matchpoint) => {
-			console.log("cchephoto",matchpoint.check_in_photo);
-			if(matchpoint.check_in_photo.includes('data:image')){
+		const customers = await this.repo.find();
+		await customers.map(async (cust) => {
+			if(cust.photo.includes('data:image')){
 				const s3Client = new S3Client({
 					forcePathStyle: false, // Configures to use subdomain/virtual calling format.
 					endpoint: "https://sfo3.digitaloceanspaces.com",
@@ -280,11 +246,11 @@ export class CustomersService{
 					}
 				});
 	
-				let base64Content = matchpoint.check_in_photo;
+				let base64Content = cust.photo;
 				const buf = Buffer.from(base64Content.replace(/^data:image\/\w+;base64,/, ""), 'base64');
 				
 				const currTime = new Date().getTime();
-				const spaceFileKey = "ezgfiles/matchpoint/"+matchpoint.id+"_"+currTime+".jpg";
+				const spaceFileKey = "ezgfiles/customerphotos/"+cust.phone+"_"+currTime+".jpg";
 				const params = {
 					Bucket: "customerphotos", 
 					Key: spaceFileKey, 
@@ -296,13 +262,56 @@ export class CustomersService{
 				//@ts-ignore
 				const uploadPhoto = await s3Client.send(new PutObjectCommand(params));
 				// cust.photo = this.configService.get('DO_SPACES_CUSTOMER_PHOTOS_PATH') + spaceFileKey;
-				const filePath = this.configService.get('DO_SPACES_CUSTOMER_PHOTOS_PATH') + spaceFileKey;
-				console.log("filePath",filePath);
-				matchpoint.check_in_photo = filePath;
-				await this.repoMatchPoints.save(matchpoint);
+				cust.photo = this.configService.get('DO_SPACES_CUSTOMER_PHOTOS_PATH') + spaceFileKey;
+				await this.repo.save(cust);
 			}
-			console.log("after photo",matchpoint.check_in_photo);
+			// console.log("cust photo",cust.photo);
 		});
+
+		// const matchpoints = await this.repoMatchPoints.find({where: {check_in_photo: Like("data:image%")}, take: 20000000});
+		// // const matchpoints = await this.repoMatchPoints.find();
+		// await matchpoints.map(async (matchpoint) => {
+		// 	console.log("cchephoto",matchpoint.check_in_photo.substring(0,20));
+		// 	const checkinphoto = matchpoint.check_in_photo;
+		// 	if(checkinphoto.includes('data:image')){
+		// 		console.log("yes in")
+		// 		try{
+		// 			const s3Client = new S3Client({
+		// 				forcePathStyle: false, // Configures to use subdomain/virtual calling format.
+		// 				endpoint: "https://sfo3.digitaloceanspaces.com",
+		// 				region: "sfo3",
+		// 				credentials: {
+		// 				accessKeyId: this.configService.get('DO_SPACES_KEY'),
+		// 				secretAccessKey: this.configService.get('DO_SPACES_SECRET')
+		// 				}
+		// 			});
+		
+		// 			let base64Content = matchpoint.check_in_photo;
+		// 			const buf = Buffer.from(base64Content.replace(/^data:image\/\w+;base64,/, ""), 'base64');
+					
+		// 			const currTime = new Date().getTime();
+		// 			const spaceFileKey = "ezgfiles/matchpoint/"+matchpoint.id+"_"+currTime+".jpg";
+		// 			const params = {
+		// 				Bucket: "customerphotos", 
+		// 				Key: spaceFileKey, 
+		// 				Body: buf,
+		// 				ContentEncoding: 'base64',
+		// 				ContentType: 'image/jpeg',
+		// 				ACL: 'public-read'
+		// 			};
+		// 			//@ts-ignore
+		// 			const uploadPhoto = await s3Client.send(new PutObjectCommand(params));
+		// 			// cust.photo = this.configService.get('DO_SPACES_CUSTOMER_PHOTOS_PATH') + spaceFileKey;
+		// 			const filePath = this.configService.get('DO_SPACES_CUSTOMER_PHOTOS_PATH') + spaceFileKey;
+		// 			console.log("filePath",filePath);
+		// 			matchpoint.check_in_photo = filePath;
+		// 			await this.repoMatchPoints.save(matchpoint);
+		// 		}catch(err){
+		// 			console.log("err",err);
+		// 		}
+		// 	}
+		// 	console.log("after photo",matchpoint.check_in_photo);
+		// });
 	}
 
 }
