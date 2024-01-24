@@ -27,8 +27,8 @@ export class UpdateCustomerDto {
 	driving_license: string
 
 	@ApiProperty()
-	@IsNumber()
-	starting_points: number
+	@IsString()
+	starting_points: string
 
 	@ApiProperty()
 	@IsBoolean()

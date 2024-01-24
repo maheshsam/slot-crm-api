@@ -49,7 +49,7 @@ export class Customer {
     country: string
 
     @Column({nullable: true})
-    starting_points: number
+    starting_points: string
 
     @Column({nullable: true, type: 'text'})
     comments: string
