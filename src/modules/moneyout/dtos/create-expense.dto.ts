@@ -24,4 +24,7 @@ export class CreateExpenseDto {
 
 	@IsOptional()
 	customer:any
+
+	@IsOptional()
+	photo?: string
 }

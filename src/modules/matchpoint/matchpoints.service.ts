@@ -11,10 +11,13 @@ import { hasSuperRole, hasPermission } from 'src/lib/misc';
 import { createPaginationObject } from 'src/lib/pagination';
 import * as moment from "moment-timezone";
 import { UpdateMatchPointDto } from './dtos/update-match-point-dto';
+import { PutObjectCommand , S3Client } from '@aws-sdk/client-s3';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class MatchpointsService{
 	constructor(
+		private configService: ConfigService,
 		@InjectRepository(MatchPoint) private repo: Repository<MatchPoint>,
 		@InjectRepository(Customer) private repoCustomer: Repository<Customer>,
 	){}
@@ -164,6 +167,36 @@ export class MatchpointsService{
 			if(matchPointExists.length > 0){
 				throw new NotAcceptableException('Match point already assigned');	
 			}
+
+			if(checkInDto.check_in_photo.includes('data:image')){
+				const s3Client = new S3Client({
+					forcePathStyle: false, // Configures to use subdomain/virtual calling format.
+					endpoint: "https://sfo3.digitaloceanspaces.com",
+					region: "sfo3",
+					credentials: {
+					  accessKeyId: this.configService.get('DO_SPACES_KEY'),
+					  secretAccessKey: this.configService.get('DO_SPACES_SECRET')
+					}
+				});
+		
+				let base64Content = checkInDto.check_in_photo;
+				const buf = Buffer.from(base64Content.replace(/^data:image\/\w+;base64,/, ""), 'base64');
+				
+				const currTime = new Date().getTime();
+				const spaceFileKey = "ezgfiles/matchpoint/"+checkInDto.customer_id+"_"+currTime+".jpg";
+				const params = {
+					Bucket: "customerphotos", 
+					Key: spaceFileKey, 
+					Body: buf,
+					ContentEncoding: 'base64',
+					ContentType: 'image/jpeg',
+					ACL: 'public-read'
+				};
+				//@ts-ignore
+				const uploadPhoto = await s3Client.send(new PutObjectCommand(params));
+				checkInDto.check_in_photo = this.configService.get('DO_SPACES_CUSTOMER_PHOTOS_PATH') + spaceFileKey;
+			}
+
 	    	const matchpoint = this.repo.create({...checkInDto, check_in_datetime: moment().utc().toISOString(), added_by: loggedInUser, current_user: loggedInUser, location: loggedInUser.userLocation, customer: customerExists});
 			await this.repo.save(matchpoint);
 			if(loggedInUser){

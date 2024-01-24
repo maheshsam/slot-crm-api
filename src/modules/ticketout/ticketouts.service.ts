@@ -10,10 +10,13 @@ import { hasSuperRole, hasPermission } from 'src/lib/misc';
 import { createPaginationObject } from 'src/lib/pagination';
 import * as moment from "moment-timezone";
 import { start } from 'repl';
+import { PutObjectCommand , S3Client } from '@aws-sdk/client-s3';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class TicketoutsService{
 	constructor(
+		private configService: ConfigService,
 		@InjectRepository(TicketOut) private repo: Repository<TicketOut>,
 		@InjectRepository(Customer) private repoCustomer: Repository<Customer>,
 	){}
@@ -102,6 +105,35 @@ export class TicketoutsService{
 			throw new ConflictException('Invalid location');	
 		}
 
+		if(recordDto.ticket_out_photo && recordDto.ticket_out_photo.includes('data:image')){
+			const s3Client = new S3Client({
+				forcePathStyle: false, // Configures to use subdomain/virtual calling format.
+				endpoint: "https://sfo3.digitaloceanspaces.com",
+				region: "sfo3",
+				credentials: {
+				  accessKeyId: this.configService.get('DO_SPACES_KEY'),
+				  secretAccessKey: this.configService.get('DO_SPACES_SECRET')
+				}
+			});
+	
+			let base64Content = recordDto.ticket_out_photo;
+			const buf = Buffer.from(base64Content.replace(/^data:image\/\w+;base64,/, ""), 'base64');
+			
+			const currTime = new Date().getTime();
+			const spaceFileKey = "ezgfiles/ticketout/"+recordDto.customer+"_"+currTime+".jpg";
+			const params = {
+				Bucket: "customerphotos", 
+				Key: spaceFileKey, 
+				Body: buf,
+				ContentEncoding: 'base64',
+				ContentType: 'image/jpeg',
+				ACL: 'public-read'
+			};
+			//@ts-ignore
+			const uploadPhoto = await s3Client.send(new PutObjectCommand(params));
+			recordDto.ticket_out_photo = this.configService.get('DO_SPACES_CUSTOMER_PHOTOS_PATH') + spaceFileKey;
+		}
+
 		// if(isSuperRole){
 		// 	const customerNameExists = await this.repoCustomer.findOne({where:{id: Number(recordDto.customer_id)}});
 		// 	if (!customerNameExists) {
@@ -145,6 +177,34 @@ export class TicketoutsService{
 		}
 		if(!tickeout){
 			throw new NotFoundException('Tickeout not found');
+		}
+		if(recordDto.ticket_out_photo && recordDto.ticket_out_photo.includes('data:image')){
+			const s3Client = new S3Client({
+				forcePathStyle: false, // Configures to use subdomain/virtual calling format.
+				endpoint: "https://sfo3.digitaloceanspaces.com",
+				region: "sfo3",
+				credentials: {
+				  accessKeyId: this.configService.get('DO_SPACES_KEY'),
+				  secretAccessKey: this.configService.get('DO_SPACES_SECRET')
+				}
+			});
+	
+			let base64Content = recordDto.ticket_out_photo;
+			const buf = Buffer.from(base64Content.replace(/^data:image\/\w+;base64,/, ""), 'base64');
+			
+			const currTime = new Date().getTime();
+			const spaceFileKey = "ezgfiles/ticketout/"+tickeout.id+"_"+currTime+".jpg";
+			const params = {
+				Bucket: "customerphotos", 
+				Key: spaceFileKey, 
+				Body: buf,
+				ContentEncoding: 'base64',
+				ContentType: 'image/jpeg',
+				ACL: 'public-read'
+			};
+			//@ts-ignore
+			const uploadPhoto = await s3Client.send(new PutObjectCommand(params));
+			recordDto.ticket_out_photo = this.configService.get('DO_SPACES_CUSTOMER_PHOTOS_PATH') + spaceFileKey;
 		}
 		if(loggedInUser){
 			tickeout.persistable.updated_by = loggedInUser;

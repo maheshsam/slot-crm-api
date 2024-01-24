@@ -9,10 +9,13 @@ import { Promotion, PromotionType } from 'src/entity/Promotion';
 import { hasSuperRole, hasPermission } from 'src/lib/misc';
 import { createPaginationObject } from 'src/lib/pagination';
 import * as moment from "moment-timezone";
+import { PutObjectCommand , S3Client } from '@aws-sdk/client-s3';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class PromotionsService{
 	constructor(
+		private configService: ConfigService,
 		@InjectRepository(Promotion) private repo: Repository<Promotion>,
 		@InjectRepository(Customer) private repoCustomer: Repository<Customer>,
 	){}
@@ -93,6 +96,36 @@ export class PromotionsService{
 		const loggedInUser = args.loggedInUser;
 		const isSuperRole = hasSuperRole(loggedInUser);
 		const recordDto: CreatePromotionDto = args.body;
+
+		if(recordDto.promotion_customer_photo && recordDto.promotion_customer_photo.includes('data:image')){
+			const s3Client = new S3Client({
+				forcePathStyle: false, // Configures to use subdomain/virtual calling format.
+				endpoint: "https://sfo3.digitaloceanspaces.com",
+				region: "sfo3",
+				credentials: {
+				  accessKeyId: this.configService.get('DO_SPACES_KEY'),
+				  secretAccessKey: this.configService.get('DO_SPACES_SECRET')
+				}
+			});
+	
+			let base64Content = recordDto.promotion_customer_photo;
+			const buf = Buffer.from(base64Content.replace(/^data:image\/\w+;base64,/, ""), 'base64');
+			
+			const currTime = new Date().getTime();
+			const spaceFileKey = "ezgfiles/promotions/"+recordDto.customer+"_"+currTime+".jpg";
+			const params = {
+				Bucket: "customerphotos", 
+				Key: spaceFileKey, 
+				Body: buf,
+				ContentEncoding: 'base64',
+				ContentType: 'image/jpeg',
+				ACL: 'public-read'
+			};
+			//@ts-ignore
+			const uploadPhoto = await s3Client.send(new PutObjectCommand(params));
+			recordDto.promotion_customer_photo = this.configService.get('DO_SPACES_CUSTOMER_PHOTOS_PATH') + spaceFileKey;
+		}
+
 		if(loggedInUser.userLocation == null){
 			throw new ConflictException('Invalid location');	
 		}
@@ -144,6 +177,36 @@ export class PromotionsService{
 		if(loggedInUser){
 			promotion.persistable.updated_by = loggedInUser;
 		}
+
+		if(recordDto.promotion_customer_photo && recordDto.promotion_customer_photo.includes('data:image')){
+			const s3Client = new S3Client({
+				forcePathStyle: false, // Configures to use subdomain/virtual calling format.
+				endpoint: "https://sfo3.digitaloceanspaces.com",
+				region: "sfo3",
+				credentials: {
+				  accessKeyId: this.configService.get('DO_SPACES_KEY'),
+				  secretAccessKey: this.configService.get('DO_SPACES_SECRET')
+				}
+			});
+	
+			let base64Content = recordDto.promotion_customer_photo;
+			const buf = Buffer.from(base64Content.replace(/^data:image\/\w+;base64,/, ""), 'base64');
+			
+			const currTime = new Date().getTime();
+			const spaceFileKey = "ezgfiles/promotions/"+promotion.id+"_"+currTime+".jpg";
+			const params = {
+				Bucket: "customerphotos", 
+				Key: spaceFileKey, 
+				Body: buf,
+				ContentEncoding: 'base64',
+				ContentType: 'image/jpeg',
+				ACL: 'public-read'
+			};
+			//@ts-ignore
+			const uploadPhoto = await s3Client.send(new PutObjectCommand(params));
+			recordDto.promotion_customer_photo = this.configService.get('DO_SPACES_CUSTOMER_PHOTOS_PATH') + spaceFileKey;
+		}
+
 		await this.repo.update(id,recordDto);
 		return promotion;
 	}
