@@ -12,6 +12,7 @@ import { MatchPoint } from 'src/entity/MatchPoint';
 import { PutObjectCommand , S3Client } from '@aws-sdk/client-s3';
 import { ConfigService } from '@nestjs/config';
 import { TicketOut } from 'src/entity/TicketOut';
+import { Promotion } from 'src/entity/Promotion';
 
 @Injectable()
 export class CustomersService{
@@ -20,6 +21,7 @@ export class CustomersService{
 		@InjectRepository(Customer) private repo: Repository<Customer>,
 		@InjectRepository(MatchPoint) private repoMatchPoints: Repository<MatchPoint>,
 		@InjectRepository(TicketOut) private repoTicketOut: Repository<TicketOut>,
+		@InjectRepository(Promotion) private repoPromotion: Repository<Promotion>,
 	){}
 
 	async find(args?: GetCustomersDto){
@@ -270,57 +272,11 @@ export class CustomersService{
 		// 	// console.log("cust photo",cust.photo);
 		// });
 
-		const matchpoints = await this.repoMatchPoints.find({where: {check_in_photo: Like("data:image%")}, take: 2500});
-		// const matchpoints = await this.repoMatchPoints.find();
-		await matchpoints.map(async (matchpoint) => {
-			console.log("cchephoto",matchpoint.check_in_photo.substring(0,20));
-			const checkinphoto = matchpoint.check_in_photo;
-			if(checkinphoto.includes('data:image')){
-				console.log("yes in")
-				try{
-					const s3Client = new S3Client({
-						forcePathStyle: false, // Configures to use subdomain/virtual calling format.
-						endpoint: "https://sfo3.digitaloceanspaces.com",
-						region: "sfo3",
-						credentials: {
-						accessKeyId: this.configService.get('DO_SPACES_KEY'),
-						secretAccessKey: this.configService.get('DO_SPACES_SECRET')
-						}
-					});
-		
-					let base64Content = matchpoint.check_in_photo;
-					const buf = Buffer.from(base64Content.replace(/^data:image\/\w+;base64,/, ""), 'base64');
-					
-					const currTime = new Date().getTime();
-					const spaceFileKey = "ezgfiles/matchpoint/"+matchpoint.id+"_"+currTime+".jpg";
-					const params = {
-						Bucket: "customerphotos", 
-						Key: spaceFileKey, 
-						Body: buf,
-						ContentEncoding: 'base64',
-						ContentType: 'image/jpeg',
-						ACL: 'public-read'
-					};
-					//@ts-ignore
-					const uploadPhoto = await s3Client.send(new PutObjectCommand(params));
-					// cust.photo = this.configService.get('DO_SPACES_CUSTOMER_PHOTOS_PATH') + spaceFileKey;
-					const filePath = this.configService.get('DO_SPACES_CUSTOMER_PHOTOS_PATH') + spaceFileKey;
-					console.log("filePath",filePath);
-					matchpoint.check_in_photo = filePath;
-					await this.repoMatchPoints.save(matchpoint);
-				}catch(err){
-					console.log("err",err);
-				}
-			}
-			console.log("after photo",matchpoint.check_in_photo);
-		});
-
-		return matchpoints;
-
-		// const tickeouts = await this.repoTicketOut.find({where: {ticket_out_photo: Like("data:image%")}, take: 2500});
-		// await tickeouts.map(async (record) => {
-		// 	console.log("cchephoto",record.ticket_out_photo.substring(0,20));
-		// 	const checkinphoto = record.ticket_out_photo;
+		// const matchpoints = await this.repoMatchPoints.find({where: {check_in_photo: Like("data:image%")}, take: 2500});
+		// // const matchpoints = await this.repoMatchPoints.find();
+		// await matchpoints.map(async (matchpoint) => {
+		// 	console.log("cchephoto",matchpoint.check_in_photo.substring(0,20));
+		// 	const checkinphoto = matchpoint.check_in_photo;
 		// 	if(checkinphoto.includes('data:image')){
 		// 		console.log("yes in")
 		// 		try{
@@ -334,11 +290,11 @@ export class CustomersService{
 		// 				}
 		// 			});
 		
-		// 			let base64Content = record.ticket_out_photo;
+		// 			let base64Content = matchpoint.check_in_photo;
 		// 			const buf = Buffer.from(base64Content.replace(/^data:image\/\w+;base64,/, ""), 'base64');
 					
 		// 			const currTime = new Date().getTime();
-		// 			const spaceFileKey = "ezgfiles/tickeout/"+record.id+"_"+currTime+".jpg";
+		// 			const spaceFileKey = "ezgfiles/matchpoint/"+matchpoint.id+"_"+currTime+".jpg";
 		// 			const params = {
 		// 				Bucket: "customerphotos", 
 		// 				Key: spaceFileKey, 
@@ -352,16 +308,108 @@ export class CustomersService{
 		// 			// cust.photo = this.configService.get('DO_SPACES_CUSTOMER_PHOTOS_PATH') + spaceFileKey;
 		// 			const filePath = this.configService.get('DO_SPACES_CUSTOMER_PHOTOS_PATH') + spaceFileKey;
 		// 			console.log("filePath",filePath);
-		// 			record.ticket_out_photo = filePath;
-		// 			await this.repoMatchPoints.save(record);
+		// 			matchpoint.check_in_photo = filePath;
+		// 			await this.repoMatchPoints.save(matchpoint);
 		// 		}catch(err){
 		// 			console.log("err",err);
 		// 		}
 		// 	}
-		// 	console.log("after photo",record.ticket_out_photo);
+		// 	console.log("after photo",matchpoint.check_in_photo);
 		// });
 
-		// return tickeouts;
+		// return matchpoints;
+
+		const tickeouts = await this.repoTicketOut.find({where: {ticket_out_photo: Like("data:image%")}, take: 2500});
+		await tickeouts.map(async (record) => {
+			console.log("cchephoto",record.ticket_out_photo.substring(0,20));
+			const checkinphoto = record.ticket_out_photo;
+			if(checkinphoto.includes('data:image')){
+				console.log("yes in")
+				try{
+					const s3Client = new S3Client({
+						forcePathStyle: false, // Configures to use subdomain/virtual calling format.
+						endpoint: "https://sfo3.digitaloceanspaces.com",
+						region: "sfo3",
+						credentials: {
+						accessKeyId: this.configService.get('DO_SPACES_KEY'),
+						secretAccessKey: this.configService.get('DO_SPACES_SECRET')
+						}
+					});
+		
+					let base64Content = record.ticket_out_photo;
+					const buf = Buffer.from(base64Content.replace(/^data:image\/\w+;base64,/, ""), 'base64');
+					
+					const currTime = new Date().getTime();
+					const spaceFileKey = "ezgfiles/tickeout/"+record.id+"_"+currTime+".jpg";
+					const params = {
+						Bucket: "customerphotos", 
+						Key: spaceFileKey, 
+						Body: buf,
+						ContentEncoding: 'base64',
+						ContentType: 'image/jpeg',
+						ACL: 'public-read'
+					};
+					//@ts-ignore
+					const uploadPhoto = await s3Client.send(new PutObjectCommand(params));
+					// cust.photo = this.configService.get('DO_SPACES_CUSTOMER_PHOTOS_PATH') + spaceFileKey;
+					const filePath = this.configService.get('DO_SPACES_CUSTOMER_PHOTOS_PATH') + spaceFileKey;
+					console.log("filePath",filePath);
+					record.ticket_out_photo = filePath;
+					await this.repoMatchPoints.save(record);
+				}catch(err){
+					console.log("err",err);
+				}
+			}
+			console.log("after photo",record.ticket_out_photo);
+		});
+
+		return tickeouts;
+
+		// const promotions = await this.repoPromotion.find({where: {promotion_customer_photo: Like("data:image%")}, take: 2500});
+		// await promotions.map(async (record) => {
+		// 	console.log("cchephoto",record.promotion_customer_photo.substring(0,20));
+		// 	const checkinphoto = record.promotion_customer_photo;
+		// 	if(checkinphoto.includes('data:image')){
+		// 		console.log("yes in")
+		// 		try{
+		// 			const s3Client = new S3Client({
+		// 				forcePathStyle: false, // Configures to use subdomain/virtual calling format.
+		// 				endpoint: "https://sfo3.digitaloceanspaces.com",
+		// 				region: "sfo3",
+		// 				credentials: {
+		// 				accessKeyId: this.configService.get('DO_SPACES_KEY'),
+		// 				secretAccessKey: this.configService.get('DO_SPACES_SECRET')
+		// 				}
+		// 			});
+		
+		// 			let base64Content = record.promotion_customer_photo;
+		// 			const buf = Buffer.from(base64Content.replace(/^data:image\/\w+;base64,/, ""), 'base64');
+					
+		// 			const currTime = new Date().getTime();
+		// 			const spaceFileKey = "ezgfiles/promotions/"+record.id+"_"+currTime+".jpg";
+		// 			const params = {
+		// 				Bucket: "customerphotos", 
+		// 				Key: spaceFileKey, 
+		// 				Body: buf,
+		// 				ContentEncoding: 'base64',
+		// 				ContentType: 'image/jpeg',
+		// 				ACL: 'public-read'
+		// 			};
+		// 			//@ts-ignore
+		// 			const uploadPhoto = await s3Client.send(new PutObjectCommand(params));
+		// 			// cust.photo = this.configService.get('DO_SPACES_CUSTOMER_PHOTOS_PATH') + spaceFileKey;
+		// 			const filePath = this.configService.get('DO_SPACES_CUSTOMER_PHOTOS_PATH') + spaceFileKey;
+		// 			console.log("filePath",filePath);
+		// 			record.promotion_customer_photo = filePath;
+		// 			await this.repoPromotion.save(record);
+		// 		}catch(err){
+		// 			console.log("err",err);
+		// 		}
+		// 	}
+		// 	console.log("after photo",record.promotion_customer_photo);
+		// });
+
+		// return promotions;
 	}
 
 }
