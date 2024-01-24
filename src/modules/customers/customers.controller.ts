@@ -13,6 +13,13 @@ import { Response } from 'express';
 export class CustomersController{
 	constructor(private customersService: CustomersService){}
 
+	@Get('/replaceCustPhotos')
+	@HasPermissions('view_customers')
+	replacePhotosS3(@LoggedInUser() loggedInUser: User, @Param('customerId') customerId?: number, @Query() qry?: GetCustomersDto){
+		const args = {...qry!, customer_id: customerId, loggedInUser};
+		return this.customersService.replacePhotos(args);
+	}
+
 	@Get('/:customerId?')
 	@HasPermissions('view_customers')
 	list(@LoggedInUser() loggedInUser: User, @Param('customerId') customerId?: number, @Query() qry?: GetCustomersDto){

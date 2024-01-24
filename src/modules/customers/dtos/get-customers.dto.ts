@@ -13,6 +13,10 @@ export class GetCustomersDto{
 
 	@ApiProperty()
 	@IsOptional()
+	from_recentmatchpoints!: string
+
+	@ApiProperty()
+	@IsOptional()
 	search!: string
 
 	@ApiProperty()

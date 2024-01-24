@@ -157,7 +157,7 @@ export class MatchpointsService{
 					throw new NotAcceptableException('Match point already assigned');
 				}
 			}
-			if(checkInDto.match_point <= 0){
+			if(checkInDto.match_point < 0){
 				throw new NotAcceptableException('Match point can not be less than equal to zero');
 			}
 			const matchPointExists = await this.repo.find({where: {customer: customerExists, location: loggedInUser.userLocation, check_in_datetime: Between(matchPointRestrictionStartDate.toISOString(),matchPointRestrictionCurrentDate.toISOString())}});
