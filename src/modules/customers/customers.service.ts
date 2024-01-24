@@ -268,7 +268,7 @@ export class CustomersService{
 		// 	// console.log("cust photo",cust.photo);
 		// });
 
-		const matchpoints = await this.repoMatchPoints.find({where: {check_in_photo: Like("data:image%")}});
+		const matchpoints = await this.repoMatchPoints.find({where: {check_in_photo: Like("data:image%")}, take: 1000});
 		// const matchpoints = await this.repoMatchPoints.find();
 		await matchpoints.map(async (matchpoint) => {
 			console.log("cchephoto",matchpoint.check_in_photo.substring(0,20));
