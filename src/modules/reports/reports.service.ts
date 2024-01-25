@@ -319,7 +319,7 @@ export class ReportsService{
 			})
 		}
 
-		return {user: user, shift_details:shiftDetails, total_money_in: moneyInTotal, money_in: moneyIn, total_money_out: moneyOutTotal, money_out: moneyOut, expenses_total: expensesTotal, expenses_count: expensesCount, bonus_total: bonusTotal, ticket_outs: totalTicketOuts, total_ticket_out: totalTicketOutsSum, match_points: totalMatchPoints, total_match_points: totalMatchPointsSum, employee_shifts: employeeShifts, total_ending_balance: totalEndingBalance };
+		return {user: user, shift_details:shiftDetails, total_money_in: moneyInTotal, money_in: moneyIn, total_money_out: moneyOutTotal, money_out: moneyOut, expenses_total: expensesTotal, expenses_count: expensesCount, bonus_total: bonusTotal, ticket_outs_count:totalTicketOutsRes.length, ticket_outs: totalTicketOuts, total_ticket_out: totalTicketOutsSum, match_points: totalMatchPoints, total_match_points: totalMatchPointsSum, employee_shifts: employeeShifts, total_ending_balance: totalEndingBalance };
 	}
 
 	async matchPointsReport(args?: GetEmpShiftSummaryDto){
@@ -360,8 +360,9 @@ export class ReportsService{
 
 		let shiftDetails = {};
 		if(user){
-			shiftDetails = this.repoEmployeeShift.findOne({where: {start_time: Between((startDate).add(5,'hours').format('YYYY-MM-DD HH:mm:ss'), (endDate).add(5,'hours').format('YYYY-MM-DD HH:mm:ss')), user: loggedInUser, location: loggedInUser.userLocation}, relations: { user: true }});
+			shiftDetails = await this.repoEmployeeShift.find({where: {start_time: Between((startDate).add(5,'hours').format('YYYY-MM-DD HH:mm:ss'), (endDate).add(5,'hours').format('YYYY-MM-DD HH:mm:ss')), user: user}, relations: { user: true }, order: { start_time : 'ASC'}});
 		}
+		console.log("shiftDetails",shiftDetails);
 
 		const totalMatchPointsQuery = this.repoMatchPoint.createQueryBuilder("match_point");
 		totalMatchPointsQuery.leftJoinAndSelect("match_point.customer", "customer");
