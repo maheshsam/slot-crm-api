@@ -42,13 +42,15 @@ export class MachineReadingsService{
 		const readingDateMoment = moment(machineDto.reading_datetime,'YYYY-MM-DDTHH:mm:ssZ').utc();
 		const readingDateMomentCPStartOf = moment(readingDateMoment);
 		const readingDateMomentCPEndOf = moment(readingDateMoment);
-		const machines = this.repoMachine.find();
+		const machines = await this.repoMachine.find();
+		
 		if(loggedInUser && loggedInUser.id){
 			try{
 				const readings: MachineReading[] = [];
 				const machineReadingsExistings = await this.repo.find({where:{location: loggedInUser.userLocation, reading_datetime: Between(moment(readingDateMoment).startOf('day').format('YYYY-MM-DD HH:mm:ss'), moment(readingDateMoment).endOf('day').format('YYYY-MM-DD HH:mm:ss'))}});
-				(await machines).map(async (machine) => {
+				machines.map(async (machine) => {
 					const machine_number = machine.machine_number;
+					
 					let machineReadingMachineNumber = [];
 					const machineReadingsExistingsCP = machineReadingsExistings;
 					if(machineReadingsExistings.length > 0){
@@ -62,6 +64,13 @@ export class MachineReadingsService{
 					if(monthly_hold == undefined){
 						monthly_hold = 0;
 					}
+					const daily_hold = readingsBody['new_in_'+machine_number] !== undefined && 
+					readingsBody['old_in_'+machine_number] !== undefined && 
+					readingsBody['new_out_'+machine_number] !== undefined && 
+					readingsBody['old_out_'+machine_number] !== undefined ? 
+					Math.round((((readingsBody['new_in_'+machine_number] - readingsBody['old_in_'+machine_number]) - (readingsBody['new_out_'+machine_number] - readingsBody['old_out_'+machine_number]))/(readingsBody['new_in_'+machine_number] - readingsBody['old_in_'+machine_number]))*100) : 0;
+
+					monthly_hold = monthly_hold + readingsBody['new_in_'+machine_number] !== undefined && readingsBody['old_in_'+machine_number] !== undefined && readingsBody['new_out_'+machine_number] !== undefined && readingsBody['old_out_'+machine_number] !== undefined ? (readingsBody['new_in_'+machine_number] - readingsBody['old_in_'+machine_number]) - (readingsBody['new_out_'+machine_number] - readingsBody['old_out_'+machine_number]) : 0;
 					const readingData = {
 						reading_datetime: readingDateMoment.startOf('day').add(1, 'minute').toISOString(), 
 						machine_number: machine.machine_number,
@@ -71,10 +80,11 @@ export class MachineReadingsService{
 						new_out: readingsBody['new_out_'+machine_number] !== undefined ? Number(readingsBody['new_out_'+machine_number]) : 0,
 						old_out: readingsBody['old_out_'+machine_number] !== undefined ? Number(readingsBody['old_out_'+machine_number]) : 0,
 						net_out: readingsBody['new_out_'+machine_number] !== undefined && readingsBody['old_out_'+machine_number] !== undefined ? readingsBody['new_out_'+machine_number] - readingsBody['old_out_'+machine_number] : 0,
-						daily_hold:  readingsBody['new_in_'+machine_number] !== undefined && readingsBody['old_in_'+machine_number] !== undefined && readingsBody['new_out_'+machine_number] !== undefined && readingsBody['old_out_'+machine_number] !== undefined ? Math.round((((readingsBody['new_in_'+machine_number] - readingsBody['old_in_'+machine_number]) - (readingsBody['new_out_'+machine_number] - readingsBody['old_out_'+machine_number]))/(readingsBody['new_in_'+machine_number] - readingsBody['old_in_'+machine_number]))*100) : 0,
-						monthly_hold: monthly_hold + readingsBody['new_in_'+machine_number] !== undefined && readingsBody['old_in_'+machine_number] !== undefined && readingsBody['new_out_'+machine_number] !== undefined && readingsBody['old_out_'+machine_number] !== undefined ? (readingsBody['new_in_'+machine_number] - readingsBody['old_in_'+machine_number]) - (readingsBody['new_out_'+machine_number] - readingsBody['old_out_'+machine_number]) : 0,
-						machine,
+						daily_hold: isNaN(daily_hold) ? 0 : daily_hold, 
+						monthly_hold: isNaN(monthly_hold) ? 0 : monthly_hold, 
+						machine
 					}
+
 					if(machineReadingMachineNumber.length > 0){
 						const machineReading = await this.repo.findOne({where: {id: machineReadingMachineNumber[0]['id']}});
 						if(machineReading){
